@@ -1,0 +1,19 @@
+{
+  "name": "뮤직룸",
+  "short_name": "뮤직룸",
+  "description": "친구들과 함께하는 음악 공유 룸",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d1a",
+  "theme_color": "#0d0d1a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230d0d1a'/><text y='140' font-size='120' text-anchor='middle' x='96'>🎵</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "/"
+}
