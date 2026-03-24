@@ -1,0 +1,3030 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎵 뮤직룸</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="뮤직룸">
+<meta name="theme-color" content="#0d0d1a">
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nanum+Gothic:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0d0d1a;
+    --surface: #1a1a2e;
+    --surface2: #16213e;
+    --accent: #e94560;
+    --accent2: #f5a623;
+    --accent3: #0f3460;
+    --green: #00ff88;
+    --purple: #a855f7;
+    --text: #e8e8f0;
+    --text-dim: #8888aa;
+    --pixel: 'Press Start 2P', monospace;
+    --body: 'Nanum Gothic', sans-serif;
+    --border: #2a2a4a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(168,85,247,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(233,69,96,0.08) 0%, transparent 50%),
+      linear-gradient(180deg, #0d0d1a 0%, #0a0a16 100%);
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: flex; }
+
+  /* ════════════════════════════════
+     SETUP SCREEN
+  ════════════════════════════════ */
+  #setup-screen {
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 32px;
+  }
+
+  .logo {
+    font-family: var(--pixel);
+    font-size: clamp(16px, 4vw, 28px);
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(233,69,96,0.6), 4px 4px 0 #7a0020;
+    text-align: center;
+    line-height: 1.6;
+    animation: flicker 3s infinite;
+  }
+  .logo span { color: var(--accent2); text-shadow: 0 0 20px rgba(245,166,35,0.6), 4px 4px 0 #7a5000; }
+
+  @keyframes flicker {
+    0%,94%,96%,100% { opacity: 1; }
+    95% { opacity: 0.8; }
+  }
+
+  .setup-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .setup-card::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px; right: -1px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--purple), var(--accent2));
+    border-radius: 4px 4px 0 0;
+  }
+
+  .setup-title {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+  }
+
+  .input-group { margin-bottom: 20px; }
+  .input-label {
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--accent2);
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .pixel-input {
+    width: 100%;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 12px 16px;
+    font-family: var(--body);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .pixel-input:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(233,69,96,0.2); }
+  .pixel-input::placeholder { color: var(--text-dim); }
+
+  /* Character picker */
+  .char-picker {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: auto auto;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .char-option {
+    background: var(--bg);
+    border: 2px solid var(--border);
+    padding: 12px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .char-option:hover { border-color: var(--accent2); }
+  .char-option.selected { border-color: var(--accent); box-shadow: 0 0 16px rgba(233,69,96,0.4); }
+  .char-option .char-sprite { display: block; margin: 0 auto 6px; }
+  .char-option .char-name { font-family: var(--pixel); font-size: 6px; color: var(--text-dim); }
+  .char-option.selected .char-name { color: var(--accent); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 14px;
+    font-family: var(--pixel);
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    position: relative;
+    box-shadow: 4px 4px 0 #7a0020;
+  }
+  .btn-primary:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 #7a0020; }
+  .btn-primary:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 #7a0020; }
+
+  .divider {
+    text-align: center;
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--text-dim);
+    margin: 16px 0;
+    position: relative;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 35%;
+    height: 1px;
+    background: var(--border);
+  }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+
+  .btn-secondary {
+    width: 100%;
+    background: transparent;
+    color: var(--purple);
+    border: 2px solid var(--purple);
+    padding: 12px;
+    font-family: var(--pixel);
+    font-size: 9px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    box-shadow: 3px 3px 0 #3d1b5e;
+  }
+  .btn-secondary:hover { background: rgba(168,85,247,0.1); transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #3d1b5e; }
+
+  /* ════════════════════════════════
+     MAIN ROOM
+  ════════════════════════════════ */
+  #room-screen {
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .room-logo {
+    font-family: var(--pixel);
+    font-size: 12px;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(233,69,96,0.5);
+  }
+  .room-id-display {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .room-id-display:hover { border-color: var(--accent2); color: var(--accent2); }
+  .topbar-right { display: flex; gap: 8px; align-items: center; }
+
+  /* MAIN LAYOUT */
+  .room-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    flex: 1;
+    min-height: 0;
+    height: calc(100vh - 57px);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* LEFT: STAGE */
+  .stage-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    flex: 1;
+  }
+
+  /* SEATS GRID */
+  .seats-container {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Center keyword area */
+  .center-keyword {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    width: 180px;
+    text-align: center;
+    pointer-events: none;
+  }
+  /* wrapper가 position:relative이므로 center-keyword는 wrapper 기준 중앙 */
+  .keyword-badge {
+    background: var(--surface);
+    border: 3px solid var(--accent2);
+    padding: 14px 18px;
+    box-shadow: 0 0 30px rgba(245,166,35,0.3), 6px 6px 0 rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .keyword-label {
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--accent2);
+    margin-bottom: 8px;
+    display: block;
+    letter-spacing: 1px;
+  }
+  .keyword-text {
+    font-family: var(--pixel);
+    font-size: 13px;
+    color: white;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  /* Individual seat */
+  .seat {
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    gap: 10px;
+    position: relative;
+    transition: background 0.3s;
+    cursor: default;
+  }
+  .seat:nth-child(1) { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .seat:nth-child(2) { border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .seat:nth-child(3) { border-right: 1px solid var(--border); border-top: 1px solid var(--border); }
+  .seat:nth-child(4) { border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
+
+  .seat.is-dj {
+    background: rgba(233,69,96,0.06);
+    box-shadow: inset 0 0 40px rgba(233,69,96,0.08);
+  }
+  .seat.is-me {
+    background: rgba(0,255,136,0.04);
+  }
+  .seat.empty { opacity: 0.4; }
+  .seat.is-away .seat-name::after {
+    content: ' 💤';
+    font-family: sans-serif;
+    font-size: 12px;
+  }
+  .seat.is-away canvas.sprite { opacity: 0.4; filter: grayscale(60%); }
+  .away-badge {
+    font-family: var(--pixel);
+    font-size: 7px;
+    color: var(--text-dim);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    margin-top: 2px;
+  }
+
+  .seat-player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dj-crown {
+    font-size: 18px;
+    animation: bob 1s ease-in-out infinite;
+    display: none;
+  }
+  .is-dj .dj-crown { display: block; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+  .seat-name {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--text);
+    text-align: center;
+  }
+  .seat.is-me .seat-name { color: var(--green); }
+  .seat.is-dj .seat-name { color: var(--accent); }
+
+  .seat-song {
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align: center;
+    max-width: 140px;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .seat-song.has-song { color: var(--accent2); }
+
+  .pick-song-btn {
+    background: var(--accent3);
+    border: 1px solid var(--purple);
+    color: var(--purple);
+    padding: 6px 12px;
+    font-family: var(--pixel);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .pick-song-btn:hover { background: rgba(168,85,247,0.2); }
+
+  /* PLAYER BAR */
+  .player-bar {
+    background: var(--surface2);
+    border-top: 2px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 80px;
+  }
+  .player-bar.hidden { display: none; }
+
+  .player-thumb {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    image-rendering: pixelated;
+  }
+  .player-info { flex: 1; min-width: 0; }
+  .player-title {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: white;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-dj { font-size: 13px; color: var(--accent); }
+
+  .player-controls { display: flex; gap: 10px; align-items: center; }
+  .ctrl-btn {
+    background: none;
+    border: 2px solid var(--border);
+    color: var(--text);
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ctrl-btn.play-btn { border-color: var(--accent); color: var(--accent); width: 44px; height: 44px; font-size: 18px; }
+  .ctrl-btn.play-btn:hover { background: var(--accent); color: white; }
+
+  #yt-player-container {
+    position: fixed;
+    bottom: 0;
+    left: -320px;
+    width: 320px;
+    height: 180px;
+    overflow: hidden;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-left: 2px solid var(--border);
+    overflow: hidden;
+    min-height: 0;
+    height: 100%;
+  }
+
+  /* KEYWORD SECTION */
+  .panel-section {
+    border-bottom: 2px solid var(--border);
+    padding: 16px;
+  }
+  .panel-section-title {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .keywords-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .keyword-tag {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 10px;
+    font-family: var(--pixel);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .keyword-tag:hover { border-color: var(--accent2); color: var(--accent2); }
+  .keyword-tag.active { border-color: var(--accent2); color: var(--accent2); background: rgba(245,166,35,0.1); }
+
+  .keyword-actions { display: flex; gap: 6px; }
+  .btn-small {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 7px;
+    font-family: var(--pixel);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .btn-small:hover { border-color: var(--purple); color: var(--purple); }
+  .btn-small.accent { border-color: var(--accent2); color: var(--accent2); }
+  .btn-small.accent:hover { background: rgba(245,166,35,0.1); }
+
+  .keyword-input-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .keyword-input-row .pixel-input { font-size: 13px; padding: 7px 10px; }
+  .keyword-input-row .btn-small { flex: 0 0 auto; padding: 7px 12px; }
+
+  /* CHAT */
+  .chat-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .chat-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    flex-shrink: 0;
+  }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    min-height: 0;
+    height: 0;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .chat-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .chat-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-msg-name {
+    font-family: var(--pixel);
+    font-size: 9px;
+  }
+  .chat-msg-time { font-size: 11px; color: var(--text-dim); }
+  .chat-msg-body {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    border-radius: 0 4px 4px 4px;
+    max-width: 90%;
+    word-break: break-word;
+  }
+  .chat-msg.is-me { align-items: flex-end; }
+  .chat-msg.is-me .chat-msg-body { border-radius: 4px 0 4px 4px; border-color: var(--green); background: rgba(0,255,136,0.05); }
+  .chat-msg.is-system .chat-msg-body { background: transparent; border: none; color: var(--text-dim); font-size: 11px; text-align: center; width: 100%; }
+
+  .chat-input-area {
+    padding: 12px;
+    border-top: 2px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .chat-input-area .pixel-input { font-size: 13px; padding: 8px 12px; flex: 1; }
+  .send-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 8px 14px;
+    font-family: var(--pixel);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 3px 3px 0 #7a0020;
+  }
+  .send-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #7a0020; }
+
+  /* ── MODAL: SONG SEARCH ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    width: 100%;
+    max-width: 560px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.7), 8px 8px 0 rgba(0,0,0,0.5);
+  }
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px; right: -1px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--purple), var(--accent));
+  }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-family: var(--pixel); font-size: 9px; color: var(--text); letter-spacing: 1px; }
+  .modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal-search { padding: 16px 20px; display: flex; gap: 8px; }
+  .modal-search .pixel-input { flex: 1; }
+  .search-btn {
+    background: var(--purple);
+    border: none;
+    color: white;
+    padding: 12px 16px;
+    font-family: var(--pixel);
+    font-size: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    box-shadow: 3px 3px 0 #3d1b5e;
+  }
+  .search-btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #3d1b5e; }
+
+  .search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .search-result-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .search-result-item:hover { border-color: var(--purple); background: rgba(168,85,247,0.05); }
+  .result-thumb {
+    width: 80px;
+    height: 56px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    image-rendering: auto;
+  }
+  .result-info { flex: 1; min-width: 0; }
+  .result-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+  }
+  .result-channel { font-size: 12px; color: var(--text-dim); }
+
+  .search-empty {
+    text-align: center;
+    padding: 40px;
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--text-dim);
+    line-height: 2;
+  }
+
+  /* ── API KEY NOTICE ── */
+  .api-notice {
+    background: rgba(245,166,35,0.1);
+    border: 1px solid var(--accent2);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--accent2);
+    line-height: 1.6;
+    margin: 0 20px 12px;
+  }
+  .api-notice a { color: var(--accent2); }
+
+  /* ── PIXEL SPRITES ── */
+  canvas.sprite { image-rendering: pixelated; }
+
+  /* CONNECTED USERS */
+  .users-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--pixel);
+    font-size: 9px;
+    color: var(--text-dim);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .user-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .user-dot::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--green);
+    display: inline-block;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* DJ INDICATOR */
+  .dj-indicator {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--pixel);
+    font-size: 9px;
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    letter-spacing: 1px;
+    z-index: 5;
+    box-shadow: 0 0 12px rgba(233,69,96,0.3);
+    animation: glow 2s ease-in-out infinite;
+  }
+  @keyframes glow { 0%,100% { box-shadow: 0 0 12px rgba(233,69,96,0.3); } 50% { box-shadow: 0 0 20px rgba(233,69,96,0.6); } }
+
+  /* NEXT DJ BTN */
+  .next-dj-btn {
+    background: transparent;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 16px;
+    font-family: var(--pixel);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+    box-shadow: 3px 3px 0 #7a0020;
+    white-space: nowrap;
+  }
+  .next-dj-btn:hover { background: var(--accent); color: white; }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--surface);
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    padding: 10px 20px;
+    font-family: var(--pixel);
+    font-size: 8px;
+    letter-spacing: 1px;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+  @keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  /* API KEY POPUP */
+  #apikey-popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #apikey-popup.open { display: flex; }
+  #apikey-popup .popup-card {
+    background: var(--surface);
+    border: 2px solid var(--accent2);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 0 40px rgba(245,166,35,0.3), 6px 6px 0 rgba(0,0,0,0.5);
+  }
+  #apikey-popup .popup-title {
+    font-family: var(--pixel);
+    font-size: 10px;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+  #apikey-popup .popup-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  #apikey-popup .popup-desc a {
+    color: var(--accent2);
+    text-decoration: none;
+  }
+
+  /* UNMUTE BANNER */
+  #unmute-bar {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 99997;
+    background: var(--accent);
+    color: white;
+    font-family: var(--pixel);
+    font-size: 10px;
+    padding: 12px 20px;
+    text-align: center;
+    cursor: pointer;
+    letter-spacing: 1px;
+    animation: slideDown 0.3s ease;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.5);
+  }
+  #unmute-bar:hover { background: #ff6b6b; }
+  @keyframes slideDown { from { transform:translateY(-100%); } to { transform:translateY(0); } }
+  @keyframes toastOut { from { opacity:1; } to { opacity:0; } }
+
+  /* ── 캐릭터 CSS 애니메이션 ── */
+
+  /* 리듬타기: 좌우 흔들며 상하 bounce */
+  @keyframes animDance {
+    0%   { transform: rotate(-12deg) translateY(0px) scale(1); }
+    25%  { transform: rotate(0deg)   translateY(-6px) scale(1.08); }
+    50%  { transform: rotate(12deg)  translateY(0px) scale(1); }
+    75%  { transform: rotate(0deg)   translateY(-4px) scale(1.05); }
+    100% { transform: rotate(-12deg) translateY(0px) scale(1); }
+  }
+  /* 점프: 위로 튀어오르기 */
+  @keyframes animJump {
+    0%,100% { transform: translateY(0px) scale(1); }
+    30%     { transform: translateY(-16px) scale(1.1); }
+    60%     { transform: translateY(-8px) scale(1.05); }
+    80%     { transform: translateY(-2px) scale(1.02); }
+  }
+  /* 흔들기: 빠른 좌우 진동 */
+  @keyframes animShake {
+    0%,100% { transform: translateX(0); }
+    15%     { transform: translateX(-6px) rotate(-5deg); }
+    30%     { transform: translateX(6px) rotate(5deg); }
+    45%     { transform: translateX(-5px) rotate(-4deg); }
+    60%     { transform: translateX(5px) rotate(4deg); }
+    75%     { transform: translateX(-3px) rotate(-2deg); }
+    90%     { transform: translateX(3px) rotate(2deg); }
+  }
+  /* 셀레브레이트: 크게 커졌다 작아지며 회전 */
+  @keyframes animCelebrate {
+    0%   { transform: scale(1) rotate(0deg); }
+    20%  { transform: scale(1.3) rotate(-15deg); }
+    40%  { transform: scale(1.3) rotate(15deg); }
+    60%  { transform: scale(1.2) rotate(-10deg); }
+    80%  { transform: scale(1.1) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  /* 슬픔: 아래로 고개 숙이기 */
+  @keyframes animCry {
+    0%,100% { transform: translateY(0) rotate(0deg); }
+    30%     { transform: translateY(4px) rotate(5deg) scale(0.92); }
+    60%     { transform: translateY(6px) rotate(3deg) scale(0.9); }
+    80%     { transform: translateY(3px) rotate(2deg) scale(0.95); }
+  }
+  /* 스핀: 별/파티 */
+  @keyframes animSpin {
+    0%   { transform: rotate(0deg) scale(1); }
+    50%  { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  .seat.is-bobbing canvas.sprite { animation: animDance 0.45s ease-in-out infinite; }
+  canvas.sprite.anim-dance     { animation: animDance 0.45s ease-in-out infinite; }
+  canvas.sprite.anim-jump      { animation: animJump 0.5s ease-out; }
+  canvas.sprite.anim-shake     { animation: animShake 0.5s ease-in-out; }
+  canvas.sprite.anim-celebrate { animation: animCelebrate 0.6s ease-in-out; }
+  canvas.sprite.anim-cry       { animation: animCry 0.8s ease-in-out; }
+  canvas.sprite.anim-spin      { animation: animSpin 0.6s ease-in-out; }
+
+  /* EMOJI RAIN */
+  .emoji-particle {
+    position: fixed;
+    top: -60px;
+    font-size: 32px;
+    pointer-events: none;
+    z-index: 99999;
+    animation: emojiFall linear forwards;
+    user-select: none;
+    line-height: 1;
+  }
+  @keyframes emojiFall {
+    0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+    70%  { opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg) scale(0.8); opacity: 0; }
+  }
+
+  /* REACTION BUTTONS */
+  .reaction-bar {
+    display: flex;
+    gap: 6px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .reaction-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 2px;
+  }
+  .reaction-btn:hover { border-color: var(--accent2); transform: scale(1.2); }
+  .reaction-btn.rhythm-active { border-color: var(--green); box-shadow: 0 0 10px rgba(0,255,136,0.4); }
+  .reaction-label {
+    font-family: var(--pixel);
+    font-size: 7px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* TABS */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    color: var(--text-dim);
+    font-family: var(--pixel);
+    font-size: 10px;
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .history-badge {
+    background: var(--accent);
+    color: white;
+    font-family: var(--pixel);
+    font-size: 6px;
+    padding: 2px 5px;
+    margin-left: 4px;
+    border-radius: 2px;
+  }
+  /* PANEL CHAT */
+  #panel-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* PANEL CHAT */
+  #panel-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .history-section {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .history-empty {
+    text-align: center;
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--text-dim);
+    margin-top: 40px;
+    line-height: 2.5;
+  }
+
+  /* HISTORY */
+  .history-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: border-color 0.15s;
+  }
+  .history-item:hover { border-color: var(--purple); }
+  .history-thumb {
+    width: 40px;
+    height: 28px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .history-info { flex: 1; min-width: 0; }
+  .history-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-meta {
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .history-meta span { color: var(--accent); }
+
+  /* PANEL CHAT / HISTORY */
+  #panel-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  #panel-history {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  /* ════════ MOBILE ════════ */
+  @media (max-width: 768px) {
+
+    /* 전체 화면을 flex column으로 */
+    #room-screen {
+      height: 100dvh !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+
+    .topbar {
+      flex-shrink: 0;
+      padding: 8px 12px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .room-logo { font-size: 9px !important; }
+    .room-id-display { font-size: 7px !important; padding: 4px 6px; }
+    .next-dj-btn { font-size: 7px !important; padding: 5px 8px; }
+    #leave-btn { font-size: 7px !important; padding: 5px 8px; }
+    .users-bar { display: none; }
+
+    /* room-layout: 스테이지 고정 + 패널 나머지 */
+    .room-layout {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* 스테이지: 고정 높이 */
+    .stage-area {
+      flex-shrink: 0 !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    .seats-container {
+      height: 300px !important;
+      min-height: 300px !important;
+      flex: none !important;
+    }
+    .seat { padding: 8px 6px; gap: 4px; }
+    .dj-crown { font-size: 12px; }
+    .seat-name { font-size: 7px !important; }
+    .seat-song { font-size: 9px; max-width: 100px; }
+    .pick-song-btn { font-size: 6px !important; padding: 3px 6px; }
+    .center-keyword {
+      width: 120px;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+    }
+    .keyword-text { font-size: 9px !important; }
+    .keyword-label { font-size: 5px !important; }
+    .keyword-badge { padding: 6px 8px; }
+    .seat canvas.sprite { width: 44px !important; height: 44px !important; }
+    .dj-indicator { font-size: 6px; padding: 2px 6px; top: 4px; }
+
+    .player-bar {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      min-height: 52px;
+      gap: 8px;
+    }
+    .player-bar.hidden { display: none !important; }
+    .player-thumb { width: 36px; height: 36px; }
+    .player-title { font-size: 7px !important; }
+    .player-dj { font-size: 10px; }
+    .ctrl-btn { width: 30px; height: 30px; font-size: 12px; }
+    .ctrl-btn.play-btn { width: 36px; height: 36px; font-size: 15px; }
+
+    /* 리액션 바: 가로 스크롤로 한 줄 */
+    .reaction-bar {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      gap: 4px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .reaction-bar::-webkit-scrollbar { display: none; }
+    .reaction-btn { padding: 4px 8px; font-size: 18px; flex-shrink: 0; }
+    .reaction-label { display: none; }
+
+    /* 우측 패널: 나머지 공간 전부 */
+    .right-panel {
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      border-left: none !important;
+      border-top: 2px solid var(--border);
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    /* 키워드 섹션 */
+    .panel-section {
+      flex-shrink: 0;
+      padding: 6px 12px;
+    }
+    .panel-section-title { font-size: 8px !important; margin-bottom: 5px; }
+    .keywords-list {
+      gap: 4px;
+      margin-bottom: 5px;
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .keywords-list::-webkit-scrollbar { display: none; }
+    .keyword-tag { font-size: 8px !important; padding: 3px 7px; flex-shrink: 0; }
+    .btn-small { font-size: 7px !important; padding: 5px; }
+    .keyword-actions { margin-bottom: 5px; }
+    .keyword-input-row { gap: 4px; }
+    .keyword-input-row .pixel-input { font-size: 13px; padding: 5px 8px; }
+
+    /* 탭 바 */
+    .tab-bar { flex-shrink: 0; }
+    .tab-btn { font-size: 9px !important; padding: 9px; }
+
+    /* 채팅 패널: 남은 공간 전부 */
+    #panel-chat {
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    .chat-section {
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    .chat-messages {
+      flex: 1 !important;
+      min-height: 0 !important;
+      height: 0 !important;
+      overflow-y: auto !important;
+    }
+    .chat-msg-body { font-size: 13px; }
+    .chat-msg-name { font-size: 8px !important; }
+
+    /* 채팅 입력창 */
+    .chat-input-area {
+      flex-shrink: 0 !important;
+      padding: 8px 10px;
+      gap: 6px;
+    }
+    .chat-input-area textarea,
+    .chat-input-area .pixel-input {
+      font-size: 14px !important;
+      padding: 10px 12px !important;
+      min-height: 44px;
+    }
+    .send-btn { font-size: 10px; padding: 10px 14px; flex-shrink: 0; }
+
+    /* 히스토리 */
+    #panel-history {
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+    }
+
+    #yt-player-container { right: 10px; bottom: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- API Key Popup -->
+<div id="apikey-popup">
+  <div class="popup-card">
+    <div class="popup-title">🔑 YOUTUBE API KEY</div>
+    <div class="popup-desc">
+      노래 검색을 위해 YouTube API 키가 필요해요.<br>
+      <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>에서 무료로 발급할 수 있어요.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" class="pixel-input" id="popup-api-input" placeholder="AIza..." style="flex:1;font-size:13px;padding:10px 12px;">
+    </div>
+    <button class="btn-primary" id="popup-save-btn" style="margin-bottom:8px;">✅ 저장하고 시작</button>
+    <button class="btn-secondary" id="popup-skip-btn" style="font-size:8px;padding:10px;">검색 없이 계속 (노래 URL 직접 입력)</button>
+  </div>
+</div>
+
+<!-- Unmute Banner -->
+<div id="unmute-bar" onclick="handleUnmute()">
+  🔇 음소거 상태입니다 — 클릭해서 소리 켜기 🔊
+</div>
+
+<!-- ══════════════════════ SETUP SCREEN ══════════════════════ -->
+<div id="setup-screen" class="screen active">
+  <div class="logo">🎵 MUSIC<span>ROOM</span></div>
+
+  <div class="setup-card">
+    <p class="setup-title">// ENTER THE ROOM</p>
+
+    <div class="input-group">
+      <label class="input-label">▸ YOUR NAME</label>
+      <input type="text" class="pixel-input" id="player-name" placeholder="닉네임 입력..." maxlength="10">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">▸ CHOOSE CHARACTER</label>
+      <div class="char-picker" id="char-picker">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="input-group" style="display:none;">
+      <input type="hidden" id="setup-api-key-input">
+      <span id="api-key-status" style="display:none;"></span>
+    </div>
+
+    <button class="btn-primary" id="create-room-btn">🏠 새 방 만들기</button>
+    <div class="divider">OR</div>
+
+    <div class="input-group">
+      <label class="input-label">▸ ROOM CODE</label>
+      <input type="text" class="pixel-input" id="room-code-input" placeholder="방 코드 입력..." maxlength="6" style="text-transform:uppercase;">
+    </div>
+    <button class="btn-secondary" id="join-room-btn">🚪 방 입장하기</button>
+  </div>
+
+  <div id="last-room-card" style="display:none;width:100%;max-width:480px;">
+    <div class="setup-card" style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-family:var(--pixel);font-size:7px;color:var(--text-dim);margin-bottom:6px;">▸ 마지막 방</div>
+        <div id="last-room-info" style="font-family:var(--pixel);font-size:10px;color:var(--accent2);"></div>
+      </div>
+      <button class="btn-small" id="rejoin-btn" style="border-color:var(--accent2);color:var(--accent2);white-space:nowrap;padding:10px 14px;">↩ 다시 입장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ ROOM SCREEN ══════════════════════ -->
+<div id="room-screen" class="screen">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="room-logo">🎵 MUSICROOM</div>
+    <div class="users-bar" id="users-bar">
+      <span style="color:var(--text-dim);margin-right:4px;">ONLINE:</span>
+    </div>
+    <div class="topbar-right">
+      <div class="room-id-display" id="room-id-display" title="클릭해서 링크 복사">📋 ROOM: ------</div>
+      <button class="next-dj-btn" id="next-dj-btn" style="display:none">▶ NEXT DJ</button>
+      <button class="next-dj-btn" id="leave-btn" style="border-color:var(--text-dim);color:var(--text-dim);box-shadow:3px 3px 0 #333;">🚪 나가기</button>
+    </div>
+  </div>
+
+  <div class="room-layout">
+    <!-- STAGE -->
+    <div class="stage-area">
+      <div class="dj-indicator" id="dj-indicator">🎧 DJ: ---</div>
+
+      <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;">
+        <div class="seats-container" id="seats-container" style="flex:1;min-height:0;">
+          <!-- Seats rendered by JS -->
+        </div>
+        <div class="center-keyword" id="center-keyword">
+          <div class="keyword-badge">
+            <span class="keyword-label">▸ TODAY'S THEME</span>
+            <div class="keyword-text" id="keyword-display">---</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player bar -->
+      <div class="player-bar hidden" id="player-bar">
+        <img class="player-thumb" id="player-thumb" src="" alt="">
+        <div class="player-info">
+          <div class="player-title" id="player-title">---</div>
+          <div class="player-dj" id="player-dj-name"></div>
+        </div>
+        <div class="player-controls">
+          <button class="ctrl-btn play-btn" id="play-pause-btn" title="재생/일시정지">▶</button>
+          <button class="ctrl-btn" id="stop-btn" title="정지">■</button>
+          <button class="ctrl-btn" id="mute-btn" title="음소거">🔊</button>
+
+        </div>
+      </div>
+      <!-- Reaction Bar -->
+      <div class="reaction-bar">
+        <span class="reaction-label">REACT:</span>
+        <button class="reaction-btn" id="rhythm-btn" title="리듬타기">🎵</button>
+        <button class="reaction-btn" onclick="launchEmoji('👍')" title="따봉">👍</button>
+        <button class="reaction-btn" onclick="launchEmoji('❤️')" title="하트">❤️</button>
+        <button class="reaction-btn" onclick="launchEmoji('🔥')" title="불꽃">🔥</button>
+        <button class="reaction-btn" onclick="launchEmoji('⭐')" title="별">⭐</button>
+        <button class="reaction-btn" onclick="launchEmoji('❄️')" title="눈">❄️</button>
+        <button class="reaction-btn" onclick="launchEmoji('🌧️')" title="비">💧</button>
+        <button class="reaction-btn" onclick="launchEmoji('🎉')" title="파티">🎉</button>
+        <button class="reaction-btn" onclick="launchEmoji('😂')" title="ㅋㅋ">😂</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <!-- Keywords -->
+      <div class="panel-section">
+        <div class="panel-section-title">▸ KEYWORDS</div>
+        <div class="keywords-list" id="keywords-list"></div>
+        <div class="keyword-actions">
+          <button class="btn-small accent" id="random-keyword-btn">🎲 RANDOM</button>
+        </div>
+        <div class="keyword-input-row">
+          <input type="text" class="pixel-input" id="new-keyword-input" placeholder="키워드 추가..." maxlength="12">
+          <button class="btn-small" id="add-keyword-btn" style="border-color:var(--green);color:var(--green);">+ ADD</button>
+        </div>
+      </div>
+
+      <!-- Tabs: Chat / History -->
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-chat" data-tab="chat">💬 CHAT</button>
+        <button class="tab-btn" id="tab-history" data-tab="history">🎵 PLAYED <span id="history-badge" class="history-badge" style="display:none;">0</span></button>
+      </div>
+
+      <!-- Chat Tab -->
+      <div class="chat-section" id="panel-chat">
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-area">
+          <textarea class="pixel-input" id="chat-input" placeholder="메시지 입력..." maxlength="200" rows="1" style="resize:none;line-height:1.4;padding:8px 12px;font-family:var(--body);font-size:14px;overflow:hidden;"></textarea>
+          <button class="send-btn" id="send-btn">SEND</button>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div class="history-section" id="panel-history" style="display:none;">
+        <div class="history-empty" id="history-empty">아직 재생된 곡이 없어요 🎵</div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SONG SEARCH MODAL -->
+<div class="modal-overlay" id="search-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🎵 노래 선정</div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="api-notice" id="api-notice" style="display:none;">
+      ⚠ API 키가 없습니다. 설정 화면에서 입력해주세요.
+    </div>
+    <div class="modal-search">
+      <input type="text" class="pixel-input" id="search-input" placeholder="노래 제목이나 아티스트 검색...">
+      <button class="search-btn" id="search-btn">🔍 검색</button>
+    </div>
+    <div class="search-results" id="search-results">
+      <div class="search-empty">검색어를 입력하고 노래를 찾아보세요 🎵</div>
+    </div>
+  </div>
+</div>
+
+<!-- YouTube Player (hidden) -->
+<div id="yt-player-container">
+  <div id="yt-player"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBH__D8eAxk2acFYRv9hJXABHMddBovKIw",
+  authDomain: "musicroom-8f8e5.firebaseapp.com",
+  databaseURL: "https://musicroom-8f8e5-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "musicroom-8f8e5",
+  storageBucket: "musicroom-8f8e5.firebasestorage.app",
+  messagingSenderId: "408855248347",
+  appId: "1:408855248347:web:1366ff869e3899e694fbfe"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Firebase 함수들을 전역으로 노출
+window._fb = { db, ref, set, get, update, onValue, push, serverTimestamp };
+window._fbReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+// ══════════════════════════════════════════
+//  PIXEL ART CHARACTER SPRITES (4 types)
+// ══════════════════════════════════════════
+const CHARS = [
+  { id: 'cat',    name: 'NEKO',   color: '#f5a623', palette: ['#f5a623','#fff','#333','#e88a00','#ffe0a0'] },
+  { id: 'robot',  name: 'ROBO',   color: '#00ccff', palette: ['#00ccff','#fff','#333','#0088aa','#aaeeff'] },
+  { id: 'ghost',  name: 'BOING',  color: '#a855f7', palette: ['#a855f7','#fff','#333','#7c3aed','#ddd8fe'] },
+  { id: 'dino',   name: 'REX',    color: '#00ff88', palette: ['#00ff88','#fff','#333','#00b360','#00ff88'] },
+  { id: 'mage',   name: 'MAGE',   color: '#ff6eb4', palette: ['#ff6eb4','#fff','#333','#9b1d6e','#ffd6ec'] },
+  { id: 'frog',   name: 'FROG',   color: '#39d353', palette: ['#39d353','#fff','#333','#1a7a2e','#c8f7d0'] },
+  { id: 'alien',  name: 'ALIEN',  color: '#b8ff3c', palette: ['#b8ff3c','#fff','#111','#5a8000','#eaffb0'] },
+  { id: 'panda',  name: 'PANDA',  color: '#e8e8e8', palette: ['#e8e8e8','#222','#555','#fff','#b0b0b0'] },
+];
+
+// Pixel art data: 16x16 sprites
+// 기본 스프라이트 (idle 프레임)
+const SPRITE_DATA = {
+  // 고양이
+  cat: [
+    '0001100000011000',
+    '0011100000001100',
+    '0011111111111100',
+    '0111111111111110',
+    '0111111111111110',
+    '0111133111331110',
+    '0111111111111110',
+    '0111101010111110',
+    '0011111001111100',
+    '0011111111111100',
+    '0001111111111000',
+    '0001111111111000',
+    '0000111111110000',
+    '0001100110011000',
+    '0011000000001100',
+    '0011000000001100',
+  ],
+  robot: [
+    '0000000110000000',
+    '0000000110000000',
+    '0000111111110000',
+    '0001111111111000',
+    '0011100110001100',
+    '0011133110331100',
+    '0011100110001100',
+    '0001111111111000',
+    '0000111111110000',
+    '0001555555551000',
+    '0011511111151100',
+    '0011511111151100',
+    '0001555555551000',
+    '0000110000011000',
+    '0000110000011000',
+    '0001110000011100',
+  ],
+  ghost: [
+    '0000011111100000',
+    '0000111111110000',
+    '0001111111111000',
+    '0011111111111100',
+    '0011133111331100',
+    '0011111111111100',
+    '0011111111111100',
+    '0011101010111100',
+    '0011111111111100',
+    '0011111111111100',
+    '0011111111111100',
+    '0011111111111100',
+    '0011110011111100',
+    '0011001100011100',
+    '0001100000001000',
+    '0000000000000000',
+  ],
+  dino: [
+    '0000001100000000',
+    '0000011110000000',
+    '0000111111000000',
+    '0001111111100000',
+    '0001113111100000',
+    '0001111111111000',
+    '0011111111111100',
+    '0011101111011100',
+    '0001111111111000',
+    '0001111111110000',
+    '0001111111100000',
+    '0001111100000000',
+    '0001111110000000',
+    '0001110111000000',
+    '0001100001100000',
+    '0000000000000000',
+  ],
+  mage: [
+    '0000001110000000',
+    '0000011111000000',
+    '0000111111100000',
+    '0001111111110000',
+    '0011111111111000',
+    '0001111111110000',
+    '0001111111110000',
+    '0001133111310000',
+    '0001111111110000',
+    '0001101001110000',
+    '0001111111110000',
+    '0001511111150000',
+    '0001511111150000',
+    '0001510000150000',
+    '0000110000110000',
+    '0001110000111000',
+  ],
+  frog: [
+    '0011000000001100',
+    '0111330000331110',
+    '0111111111111110',
+    '0011111111111100',
+    '0011132112311100',
+    '0011111111111100',
+    '0011101001011100',
+    '0001111111111000',
+    '0011111111111100',
+    '0011111111111100',
+    '0011111111111100',
+    '0001111111111000',
+    '0001100000011000',
+    '0001100000011000',
+    '0011100000001100',
+    '0011000000001100',
+  ],
+  alien: [
+    '0000011111100000',
+    '0000111111110000',
+    '0001111111111000',
+    '0011111111111100',
+    '0011133333311100',
+    '0011133333311100',
+    '0011111111111100',
+    '0000111111110000',
+    '0000111111110000',
+    '0001111111111000',
+    '0011111111111100',
+    '0011111001111100',
+    '0001111111111000',
+    '0000111111110000',
+    '0001100000011000',
+    '0001100000011000',
+  ],
+  panda: [
+    '0022000000002200',
+    '0222100000012220',
+    '0221111111112200',
+    '0011111111111100',
+    '0011111111111100',
+    '0011122112211100',
+    '0011111111111100',
+    '0011101001011100',
+    '0001111111111000',
+    '0001111111111000',
+    '0000111111110000',
+    '0002111111120000',
+    '0002111111120000',
+    '0002100000120000',
+    '0001100000011000',
+    '0000000000000000',
+  ],
+};
+
+function drawSprite(canvasEl, charId, scale=3) {
+  const char = CHARS.find(c => c.id === charId) || CHARS[0];
+  const rows = SPRITE_DATA[charId] || SPRITE_DATA.cat;
+  const size = 16;
+  canvasEl.width = size * scale;
+  canvasEl.height = size * scale;
+  const ctx = canvasEl.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const colors = {
+    '0': 'transparent',
+    '1': char.palette[0],
+    '2': char.palette[1],
+    '3': char.palette[2],
+    '4': char.palette[3],
+    '5': char.palette[4],
+    '6': char.palette[0] || 'transparent',
+  };
+  rows.forEach((row, y) => {
+    [...row].forEach((px, x) => {
+      if (px === '0') return;
+      ctx.fillStyle = colors[px] || char.palette[0];
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    });
+  });
+}
+
+// ══════════════════════════════════════════
+//  CSS ANIMATION ENGINE (A안 - CSS 기반)
+// ══════════════════════════════════════════
+const EMOJI_ANIM = {
+  '👍': 'jump',
+  '❤️': 'shake',
+  '🔥': 'dance',
+  '⭐': 'spin',
+  '❄️': 'shake',
+  '💧': 'cry',
+  '🎉': 'celebrate',
+  '😂': 'jump',
+  '🎵': 'dance',
+};
+
+function playCharAnim(seatIdx, animClass, durationMs = 600) {
+  const canvas = document.getElementById(`sprite-${seatIdx}`);
+  if (!canvas) return;
+  // 기존 애니메이션 제거
+  canvas.classList.remove('anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin');
+  // 강제 reflow
+  void canvas.offsetWidth;
+  canvas.classList.add(animClass);
+  if (animClass !== 'anim-dance') {
+    setTimeout(() => canvas.classList.remove(animClass), durationMs);
+  }
+}
+
+function stopCharAnim(seatIdx) {
+  const canvas = document.getElementById(`sprite-${seatIdx}`);
+  if (!canvas) return;
+  canvas.classList.remove('anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin');
+}
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let state = {
+  me: null,          // { name, charId, seatIndex }
+  roomId: null,
+  seats: [null, null, null, null], // null | { name, charId, seatIndex, song: null | { id, title, thumb } }
+  currentDJIndex: 0,
+  keyword: '???',
+  keywords: [], // 사용자가 추가한 키워드
+  // 랜덤 키워드 모음집 (내장)
+  keywordPool: [
+    '새벽감성','드라이브','설레임','신남','추억','비오는날','여름밤','파티',
+    '첫사랑','이별','재회','그리움','설레는봄','무더운여름','쓸쓸한가을','포근한겨울',
+    '카페','도로위','혼자있고싶을때','친구들과','연인과','퇴근길','출근길','밤산책',
+    '바다','산','캠핑','여행','집순이','운동할때','공부할때','잠들기전',
+    '인디감성','힙합','발라드','재즈','팝','R&B','록','일렉트로닉',
+    '90년대','2000년대','요즘노래','명곡','숨겨진명곡','커버곡','OST',
+    '위로','응원','행복','슬픔','분노','설렘','두근두근','몽글몽글',
+    '비오는창가','눈오는날','맑은날','흐린날','달밤','새벽3시','골든아워',
+    '영화같은','드라마OST','애니OST','게임BGM','광고음악',
+    '혼술','치맥','라면','야식','브런치','카페인','디저트',
+    '드라이브스루','대중교통','자전거','걷기','달리기',
+    '첫만남','고백','데이트','이별통보','재회','짝사랑',
+    '졸업','입학','취업','퇴사','이사','생일','기념일',
+  ],
+  playing: false,
+  currentSong: null,
+  history: [],  // { title, thumb, djName, keyword, time }
+  rhythmOn: false,
+  playedSeats: new Set(), // 이미 재생한 자리 인덱스
+};
+
+let ytPlayer = null;
+let ytReady = false;
+let ytApiKey = 'AIzaSyAW3tGSZ0CvhX1bakhF80YdeZCFkywMnJM';
+// URL 파라미터나 localStorage에 다른 키가 있으면 그걸 우선 사용
+ytApiKey = new URLSearchParams(location.search).get('ytkey') || localStorage.getItem('yt_api_key') || ytApiKey;
+let fbReady = false;
+let unsubscribers = [];
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function generateRoomId() {
+  return Math.random().toString(36).substring(2,8).toUpperCase();
+}
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+function timeStr() {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+
+// ══════════════════════════════════════════
+//  SETUP SCREEN
+// ══════════════════════════════════════════
+let selectedChar = CHARS[0].id;
+
+function renderCharPicker() {
+  const container = document.getElementById('char-picker');
+  container.innerHTML = CHARS.map(c => `
+    <div class="char-option ${c.id === selectedChar ? 'selected' : ''}" data-char="${c.id}">
+      <canvas class="char-sprite sprite" data-char="${c.id}" width="48" height="48"></canvas>
+      <span class="char-name">${c.name}</span>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.char-sprite').forEach(canvas => {
+    drawSprite(canvas, canvas.dataset.char, 3);
+  });
+
+  container.querySelectorAll('.char-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      selectedChar = opt.dataset.char;
+      container.querySelectorAll('.char-option').forEach(o => o.classList.toggle('selected', o.dataset.char === selectedChar));
+    });
+  });
+}
+
+document.getElementById('create-room-btn').addEventListener('click', () => {
+  const name = document.getElementById('player-name').value.trim();
+  if (!name) { toast('닉네임을 입력해주세요!'); return; }
+  const roomId = generateRoomId();
+  enterRoom(roomId, name, selectedChar);
+});
+
+document.getElementById('join-room-btn').addEventListener('click', async () => {
+  const name = document.getElementById('player-name').value.trim();
+  const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (!name) { toast('닉네임을 입력해주세요!'); return; }
+  if (!code || code.length !== 6) { toast('방 코드 6자리를 입력해주세요!'); return; }
+  if (!window._fbReady) { toast('Firebase 연결 중... 잠시 후 다시 시도해주세요.'); return; }
+  const { db, ref, get } = window._fb;
+  const snap = await get(ref(db, `rooms/${code}`));
+  if (!snap.exists()) { toast('존재하지 않는 방이에요!'); return; }
+  const seats = snap.val().seats || {};
+  const taken = Object.values(seats).map(s => s.seatIndex);
+  const free = [0,1,2,3].find(i => !taken.includes(i));
+  if (free === undefined) { toast('방이 꽉 찼어요!'); return; }
+  enterRoom(code, name, selectedChar, free);
+});
+
+// ══════════════════════════════════════════
+//  ENTER ROOM (Firebase 실시간 동기화)
+// ══════════════════════════════════════════
+async function enterRoom(roomId, name, charId, seatIndex = 0) {
+  if (!window._fbReady) { toast('Firebase 연결 실패'); return; }
+  const { db, ref, set, get, update, onValue, push } = window._fb;
+
+  const roomRef = ref(db, `rooms/${roomId}`);
+  const snap = await get(roomRef);
+
+  if (!snap.exists()) {
+    // 키워드는 빈 배열로 시작, 풀에서 랜덤 1개 선택
+    const pool = state.keywordPool || ['새벽감성','드라이브','설레임','신남'];
+    const initKw = pool[Math.floor(Math.random() * pool.length)];
+    await set(roomRef, { createdAt: Date.now(), keyword: initKw, keywords: {}, currentDJIndex: 0, seats: {}, history: {} });
+    seatIndex = 0;
+  }
+
+  state.roomId = roomId;
+  state.me = { name, charId, seatIndex };
+  const myKey = `seat_${seatIndex}`;
+  // 마지막 방 정보 저장
+  localStorage.setItem('last_room_id', roomId);
+  localStorage.setItem('last_room_name', name);
+  localStorage.setItem('last_room_char', charId);
+
+  // 기존에 같은 이름으로 앉아있는 자리 먼저 제거 (중복 방지)
+  const existingSnap = await get(ref(db, `rooms/${roomId}/seats`));
+  if (existingSnap.exists()) {
+    const existingSeats = existingSnap.val();
+    for (const [key, seat] of Object.entries(existingSeats)) {
+      if (seat && seat.name === name) {
+        await set(ref(db, `rooms/${roomId}/seats/${key}`), null);
+      }
+    }
+  }
+
+  await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, seatIndex, song: null, joinedAt: Date.now() });
+
+  // 즉시 로컬 렌더 (Firebase 응답 전 내 자리 먼저 표시)
+  state.seats = [null, null, null, null];
+  state.seats[seatIndex] = { name, charId, seatIndex, song: null };
+  state.keyword = state.keyword || '???';
+
+  // UI 전환
+  document.getElementById('setup-screen').classList.remove('active');
+  document.getElementById('room-screen').classList.add('active');
+  document.getElementById('room-id-display').textContent = `📋 ROOM: ${roomId}`;
+  renderSeats();
+  renderUsersBar();
+  updateDJIndicator();
+  document.getElementById('room-id-display').addEventListener('click', () => {
+    const base = `${location.origin}${location.pathname}`;
+    const params = new URLSearchParams({ room: roomId });
+    if (ytApiKey) params.set('ytkey', ytApiKey);
+    navigator.clipboard.writeText(`${base}?${params.toString()}`).then(() => toast('링크 복사됨! 🔗'));
+  });
+
+  // 초기 키워드 렌더
+  renderKeywords();
+
+  // ── 실시간 리스너 ──
+
+  // 방 상태 (keyword, DJ)
+  onValue(ref(db, `rooms/${roomId}`), snap => {
+    if (!snap.exists()) return;
+    const data = snap.val();
+    let changed = false;
+    if (data.keyword && data.keyword !== state.keyword) { state.keyword = data.keyword; changed = true; }
+    if (data.keywords) {
+      const kws = typeof data.keywords === 'object' && !Array.isArray(data.keywords)
+        ? Object.values(data.keywords)
+        : data.keywords;
+      // 중복 제거 후 적용
+      const unique = [...new Set(kws.filter(Boolean))];
+      if (JSON.stringify(unique) !== JSON.stringify(state.keywords)) {
+        state.keywords = unique;
+        changed = true;
+      }
+    }
+    if (changed) renderKeywords();
+    if (typeof data.currentDJIndex === 'number' && data.currentDJIndex !== state.currentDJIndex) {
+      state.currentDJIndex = data.currentDJIndex;
+      renderSeats(); updateDJIndicator();
+    }
+  });
+
+  // 자리
+  onValue(ref(db, `rooms/${roomId}/seats`), snap => {
+    const seats = snap.val() || {};
+    const newSeats = [null, null, null, null];
+    Object.values(seats).forEach(s => { if (s && typeof s.seatIndex === 'number') newSeats[s.seatIndex] = s; });
+    const prevSeats = state.seats;
+    state.seats = newSeats;
+
+    const occupiedIndexes = newSeats.map((s,i) => s ? i : -1).filter(i => i >= 0);
+
+    // 아무도 없다가 첫 입장 → 그 사람이 DJ
+    if (occupiedIndexes.length === 1) {
+      const firstIdx = occupiedIndexes[0];
+      if (state.currentDJIndex !== firstIdx) {
+        fbUpdateDJ(firstIdx);
+      }
+    }
+
+    // 현재 DJ 자리가 비었으면 → 남아있는 다음 사람에게 DJ 넘기기
+    // (내가 방장일 때만 처리, 중복 방지)
+    const djSeat = newSeats[state.currentDJIndex];
+    if (!djSeat && occupiedIndexes.length > 0) {
+      // 내가 방에 있을 때만 처리
+      const amIHere = newSeats.some(s => s && state.me && s.name === state.me.name);
+      if (amIHere) {
+        // DJ였던 사람이 방금 나갔는지 확인
+        const prevDjSeat = prevSeats[state.currentDJIndex];
+        if (prevDjSeat) {
+          // 현재 DJ 인덱스 다음 순서로 자동 이전
+          let next = (state.currentDJIndex + 1) % 4;
+          for (let i = 0; i < 4; i++) {
+            if (newSeats[next]) break;
+            next = (next + 1) % 4;
+          }
+          if (newSeats[next]) {
+            fbUpdateDJ(next);
+            fbSendSystemChat(roomId, `🎧 ${newSeats[next].name}님이 다음 DJ가 됩니다!`);
+          }
+        }
+      }
+    }
+
+    renderSeats(); renderUsersBar(); updateDJIndicator();
+  });
+
+  // 채팅
+  onValue(ref(db, `rooms/${roomId}/chat`), snap => {
+    if (!snap.exists()) return;
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = '';
+    Object.values(snap.val()).sort((a,b) => a.ts - b.ts).forEach(msg => {
+      if (msg.system) {
+        const div = document.createElement('div');
+        div.className = 'chat-msg is-system';
+        div.innerHTML = `<div class="chat-msg-body">${escHtml(msg.text)}</div>`;
+        container.appendChild(div);
+      } else {
+        const isMe = state.me && msg.name === state.me.name;
+        const char = CHARS.find(c => c.id === msg.charId);
+        const div = document.createElement('div');
+        div.className = `chat-msg ${isMe ? 'is-me' : ''}`;
+        div.innerHTML = `<div class="chat-msg-header"><span class="chat-msg-name" style="color:${char ? char.color : 'var(--text-dim)'}">${escHtml(msg.name)}</span><span class="chat-msg-time">${msg.time||''}</span></div><div class="chat-msg-body">${escHtml(msg.text)}</div>`;
+        container.appendChild(div);
+      }
+    });
+    container.scrollTop = container.scrollHeight;
+  });
+
+  // 히스토리
+  onValue(ref(db, `rooms/${roomId}/history`), snap => {
+    if (!snap.exists()) return;
+    state.history = Object.values(snap.val()).sort((a,b) => b.ts - a.ts);
+    renderHistory();
+  });
+
+  // 노래 끝남 신호 → 전 DJ 본인만 다음 DJ로 넘기기
+  let lastEndedTs = 0;
+  onValue(ref(db, `rooms/${roomId}/songEnded`), snap => {
+    if (!snap.exists()) return;
+    const data = snap.val();
+    if (!data || data.ts <= lastEndedTs) return;
+    lastEndedTs = data.ts;
+    // 모든 참여자: 해당 DJ 자리 재선정 허용 (타입 강제 변환)
+    const djIdx = Number(data.djIndex);
+    state.playedSeats.delete(djIdx);
+    state.playedSeats.delete(String(djIdx)); // 문자열 키도 제거
+    renderSeats();
+
+    // DJ 넘기기는 전 DJ 본인만 처리
+    const prevDJSeat = state.seats[data.djIndex];
+    const amPrevDJ = prevDJSeat && state.me && prevDJSeat.name === state.me.name;
+    if (!amPrevDJ) return;
+    // 다음 DJ 계산 (점유된 자리 순서로)
+    const occupied = state.seats.map((s,i) => s ? i : -1).filter(i => i >= 0);
+    if (occupied.length === 0) return;
+    const curPos = occupied.indexOf(data.djIndex);
+    const nextIdx = occupied[(curPos + 1) % occupied.length];
+    fbUpdateDJ(nextIdx);
+    // 키워드 순환 체크 (모두 한 바퀴 돌았는지)
+    state._djRound = (state._djRound || []);
+    if (!state._djRound.includes(data.djIndex)) state._djRound.push(data.djIndex);
+    if (occupied.every(i => state._djRound.includes(i))) {
+      // 모든 참여자가 한 바퀴 완료 → 재선정 허용 + 키워드 변경
+      state._djRound = [];
+      state.playedSeats.clear(); // 노래 재선정 활성화
+
+      // Firebase에도 playedSeats 리셋 신호
+      const { db: db2, ref: ref2, set: set2 } = window._fb;
+      set2(ref2(db2, `rooms/${roomId}/roundReset`), { ts: Date.now() });
+
+      // 4번 로직으로 키워드 변경
+      applyKeywordLogic();
+      fbSendSystemChat(roomId, `🎉 한 바퀴 완료! 노래를 다시 선정해주세요!`);
+    }
+    fbSendSystemChat(roomId, `🎧 노래 끝! 다음 DJ: ${state.seats[nextIdx].name}`);
+  });
+
+  // 라운드 리셋 신호 수신 → 모든 참여자 playedSeats 리셋
+  let lastResetTs = 0;
+  onValue(ref(db, `rooms/${roomId}/roundReset`), snap => {
+    if (!snap.exists()) return;
+    const data = snap.val();
+    if (!data || data.ts <= lastResetTs) return;
+    lastResetTs = data.ts;
+    state.playedSeats.clear();
+    state._djRound = [];
+    renderSeats();
+    toast('🎉 새 라운드 시작! 노래를 선정해주세요');
+  });
+
+  // 재생 중인 곡 — ts 기반으로 항상 트리거
+  let lastPlayTs = 0;
+  onValue(ref(db, `rooms/${roomId}/nowPlaying`), snap => {
+    if (!snap.exists()) return;
+    const np = snap.val();
+    if (!np || !np.videoId) return;
+    if (np.ts <= lastPlayTs) return;
+    lastPlayTs = np.ts;
+
+    state.currentSong = { id: np.videoId, title: np.title, thumb: np.thumb };
+
+    const djSeat = state.seats[state.currentDJIndex];
+    const amDJ = djSeat && state.me && djSeat.name === state.me.name;
+
+    const doPlay = () => {
+      if (ytReady && ytPlayer) {
+        if (amDJ) {
+          // DJ는 그냥 재생
+          ytPlayer.loadVideoById(np.videoId);
+        } else {
+          // 비DJ는 음소거 후 재생 → 언뮤트 배너 표시
+          ytPlayer.mute();
+          isMuted = true;
+          document.getElementById('mute-btn').textContent = '🔇';
+          document.getElementById('mute-btn').style.color = 'var(--accent)';
+          ytPlayer.loadVideoById(np.videoId);
+          showUnmuteBar();
+        }
+      } else {
+        const waitPlay = setInterval(() => {
+          if (ytReady && ytPlayer) { clearInterval(waitPlay); doPlay(); }
+        }, 300);
+      }
+    };
+    doPlay();
+
+    document.getElementById('player-bar').classList.remove('hidden');
+    document.getElementById('player-thumb').src = np.thumb || '';
+    document.getElementById('player-title').textContent = np.title;
+    document.getElementById('player-dj-name').textContent = `🎧 DJ: ${np.djName}`;
+    // 잠금화면 미디어 컨트롤 업데이트
+    updateMediaSession(np.title, np.djName, np.thumb);
+  });
+
+  fbSendSystemChat(roomId, `${name}님이 입장했습니다 🎉`);
+
+  // 리듬 리스너
+  onValue(ref(db, `rooms/${roomId}/rhythm`), snap => {
+    if (!snap.exists()) return;
+    const rhythmData = snap.val();
+    state.seats.forEach((seat, idx) => {
+      if (!seat) return;
+      const key = seat.name.replace(/[.#$[\]]/g, '_');
+      const r = rhythmData[key];
+      if (r && r.on) {
+        startRhythm(idx);
+        playCharAnim(idx, 'anim-dance');
+      } else {
+        stopRhythm(idx);
+        stopCharAnim(idx);
+      }
+    });
+  });
+
+  // 이모지 리액션 리스너
+  let lastReactionTs = 0;
+  onValue(ref(db, `rooms/${roomId}/reactions`), snap => {
+    if (!snap.exists()) return;
+    const reactions = snap.val();
+    const items = Object.values(reactions).sort((a,b) => a.ts - b.ts);
+    const latest = items[items.length - 1];
+    if (!latest || latest.ts <= lastReactionTs) return;
+    lastReactionTs = latest.ts;
+    // 다른 사람이 보낸 이모지 로컬 파티클 실행
+    spawnEmojiLocally(latest.emoji);
+    // 보낸 사람 캐릭터 애니메이션
+    if (latest.senderName) {
+      const senderIdx = state.seats.findIndex(s => s && s.name === latest.senderName);
+      if (senderIdx >= 0) {
+        const animClass = 'anim-' + (EMOJI_ANIM[latest.emoji] || 'jump');
+        playCharAnim(senderIdx, animClass, 700);
+      }
+    }
+    // 보낸 사람 캐릭터 애니메이션
+    if (latest.senderName) {
+      const senderIdx = state.seats.findIndex(s => s && s.name === latest.senderName);
+      if (senderIdx >= 0) {
+        const animName = EMOJI_ANIM[latest.emoji] || 'jump';
+        startSeatAnim(senderIdx, animName, false);
+      }
+    }
+  });
+
+  // 리듬 버튼 바인딩
+  bindRhythmBtn();
+}
+
+function fbSendChat(text) {
+  if (!state.roomId || !state.me || !window._fbReady) return;
+  const { db, ref, push } = window._fb;
+  const now = new Date();
+  push(ref(db, `rooms/${state.roomId}/chat`), {
+    name: state.me.name, charId: state.me.charId, text,
+    time: `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`,
+    ts: Date.now(), system: false
+  });
+}
+
+function fbSendSystemChat(roomId, text) {
+  if (!window._fbReady) return;
+  const { db, ref, push } = window._fb;
+  push(ref(db, `rooms/${roomId}/chat`), { text, ts: Date.now(), system: true });
+}
+
+function fbUpdateKeyword(keyword) {
+  if (!state.roomId || !window._fbReady) return;
+  const { db, ref, update } = window._fb;
+  update(ref(db, `rooms/${state.roomId}`), { keyword });
+}
+
+function fbUpdateKeywords(keywords) {
+  if (!state.roomId || !window._fbReady) return;
+  const { db, ref, set } = window._fb;
+  // Firebase 배열 문제 방지 위해 객체로 저장
+  const kwObj = {};
+  keywords.forEach((k, i) => { kwObj[`kw_${i}`] = k; });
+  set(ref(db, `rooms/${state.roomId}/keywords`), kwObj);
+}
+
+function fbUpdateDJ(index) {
+  if (!state.roomId || !window._fbReady) return;
+  const { db, ref, update } = window._fb;
+  update(ref(db, `rooms/${state.roomId}`), { currentDJIndex: index });
+}
+
+function fbUpdateSong(seatIndex, song) {
+  if (!state.roomId || !window._fbReady) return;
+  const { db, ref, update } = window._fb;
+  update(ref(db, `rooms/${state.roomId}/seats/seat_${seatIndex}`), { song: song || null });
+}
+
+function fbBroadcastPlay(song, djName) {
+  if (!state.roomId || !window._fbReady) return;
+  const { db, ref, set } = window._fb;
+  set(ref(db, `rooms/${state.roomId}/nowPlaying`), {
+    videoId: song.id, title: song.title, thumb: song.thumb, djName, ts: Date.now(), autoPlay: true
+  });
+}
+
+function fbAddHistory(entry) {
+  if (!state.roomId || !window._fbReady) return;
+  const { db, ref, push } = window._fb;
+  push(ref(db, `rooms/${state.roomId}/history`), { ...entry, ts: Date.now() });
+}
+
+
+
+// ══════════════════════════════════════════
+//  RENDER SEATS
+// ══════════════════════════════════════════
+function renderSeats() {
+  const container = document.getElementById('seats-container');
+  const positions = ['TOP-LEFT', 'TOP-RIGHT', 'BOTTOM-LEFT', 'BOTTOM-RIGHT'];
+
+  // Keep center keyword
+  container.innerHTML = '';
+
+  for (let i = 0; i < 4; i++) {
+    const seat = state.seats[i];
+    const isMe = seat && state.me && seat.name === state.me.name;
+    const isDJ = i === state.currentDJIndex;
+    const isEmpty = !seat;
+
+    const div = document.createElement('div');
+    const isAway = seat && seat.away;
+    div.className = `seat ${isDJ ? 'is-dj' : ''} ${isMe ? 'is-me' : ''} ${isEmpty ? 'empty' : ''} ${isAway ? 'is-away' : ''}`;
+    div.dataset.seat = i;
+
+    if (isEmpty) {
+      div.innerHTML = `
+        <div style="font-family:var(--pixel);font-size:9px;color:var(--text-dim);text-align:center;line-height:2.5;">
+          <div style="font-size:24px;margin-bottom:8px;opacity:0.3">👤</div>
+          WAITING...<br>${positions[i]}
+        </div>`;
+    } else {
+      const hasSong = seat.song && seat.song.id;
+      const isMyTurn = isMe && isDJ;
+      div.innerHTML = `
+        <div class="dj-crown">👑</div>
+        <div class="seat-player-info">
+          <canvas class="sprite" id="sprite-${i}" width="64" height="64"></canvas>
+          <div class="seat-name">${seat.name}${isMe ? ' (나)' : ''}</div>
+          <div class="seat-song ${hasSong ? 'has-song' : ''}">
+            ${hasSong ? '🎵 ' + seat.song.title : '노래 미선정'}
+          </div>
+          ${isMe ? `<button class="pick-song-btn" data-seat="${i}">🔍 노래 선정</button>` : ''}
+          ${isMyTurn ? `<button class="ctrl-btn play-btn" style="width:auto;padding:6px 14px;font-family:var(--pixel);font-size:8px;" id="my-play-btn">▶ 재생</button>` : ''}
+        </div>`;
+    }
+
+    container.appendChild(div);
+
+    // Draw sprite
+    if (seat) {
+      requestAnimationFrame(() => {
+        const c = document.getElementById(`sprite-${i}`);
+        if (c) drawSprite(c, seat.charId, 4);
+      });
+    }
+  }
+
+  // renderSeats 이후 진행 중인 애니메이션 재시작
+  requestAnimationFrame(() => {
+    Object.keys(seatAnimState).forEach(idx => {
+      const i = Number(idx);
+      const anim = seatAnimState[i]?.anim;
+      if (anim) startSeatAnim(i, anim, seatAnimState[i]?.loop ?? true);
+    });
+  });
+
+  // renderSeats 후 리듬 중인 자리 dance 클래스 재적용
+  requestAnimationFrame(() => {
+    state.seats.forEach((seat, idx) => {
+      if (seat && seat.rhythmOn) playCharAnim(idx, 'anim-dance');
+    });
+  });
+
+  // Bind pick song buttons
+  container.querySelectorAll('.pick-song-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSearchModal();
+    });
+  });
+
+  // Bind my play btn
+  const myPlayBtn = document.getElementById('my-play-btn');
+  if (myPlayBtn) {
+    myPlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playCurrentDJSong();
+    });
+  }
+
+  // NEXT DJ btn visibility
+  const amDJ = state.me && state.seats[state.currentDJIndex] && state.seats[state.currentDJIndex].name === state.me.name;
+  document.getElementById('next-dj-btn').style.display = amDJ ? 'block' : 'none';
+}
+
+function renderUsersBar() {
+  const bar = document.getElementById('users-bar');
+  bar.innerHTML = '<span style="color:var(--text-dim);margin-right:4px;">ONLINE:</span>';
+  state.seats.forEach(seat => {
+    if (!seat) return;
+    const char = CHARS.find(c => c.id === seat.charId);
+    const dot = document.createElement('span');
+    dot.className = 'user-dot';
+    dot.textContent = seat.name;
+    dot.style.color = char ? char.color : 'white';
+    bar.appendChild(dot);
+  });
+}
+
+function updateDJIndicator() {
+  const djSeat = state.seats[state.currentDJIndex];
+  document.getElementById('dj-indicator').textContent = `🎧 DJ: ${djSeat ? djSeat.name : '---'}`;
+}
+
+// ══════════════════════════════════════════
+//  KEYWORDS
+// ══════════════════════════════════════════
+function renderKeywords() {
+  const list = document.getElementById('keywords-list');
+  list.innerHTML = state.keywords.map(kw => `
+    <div class="keyword-tag ${kw === state.keyword ? 'active' : ''}" data-kw="${kw}">${kw}</div>
+  `).join('');
+
+  list.querySelectorAll('.keyword-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      state.keyword = tag.dataset.kw;
+      fbUpdateKeyword(state.keyword);
+      fbSendSystemChat(state.roomId, `키워드가 "${state.keyword}"(으)로 변경됐습니다 🏷️`);
+      renderKeywords();
+    });
+  });
+
+  // Update center keyword display (without re-rendering seats)
+  const kd = document.getElementById('keyword-display');
+  if (kd) kd.textContent = state.keyword;
+}
+
+document.getElementById('random-keyword-btn').addEventListener('click', () => {
+  applyKeywordLogic();
+  toast('🎲 키워드 변경!');
+});
+
+document.getElementById('add-keyword-btn').addEventListener('click', addKeyword);
+document.getElementById('new-keyword-input').addEventListener('keydown', e => { if (e.key === 'Enter') addKeyword(); });
+
+function addKeyword() {
+  const input = document.getElementById('new-keyword-input');
+  const kw = input.value.trim();
+  if (!kw) return;
+  if (state.keywords.includes(kw)) { toast('이미 있는 키워드예요!'); return; }
+
+  // Firebase에 단건 push
+  if (state.roomId && window._fbReady) {
+    const { db, ref, push } = window._fb;
+    push(ref(db, `rooms/${state.roomId}/keywords`), kw);
+  }
+  state.keywords.push(kw);
+  input.value = '';
+  renderKeywords();
+  toast(`키워드 추가: ${kw} ✅`);
+
+  // 4번: 키워드 추가 시 자동 변경 로직
+  applyKeywordLogic();
+}
+
+function applyKeywordLogic() {
+  // 사용자가 추가한 키워드 기준
+  const userKws = state.keywords.filter(Boolean);
+  let newKw;
+
+  if (userKws.length === 1) {
+    // 1개면 100% 해당 키워드
+    newKw = userKws[0];
+  } else if (userKws.length >= 2) {
+    // 2개 이상이면 랜덤
+    newKw = userKws[Math.floor(Math.random() * userKws.length)];
+  } else {
+    // 없으면 내장 풀에서 랜덤
+    const pool = state.keywordPool || [];
+    const others = pool.filter(k => k !== state.keyword);
+    newKw = others.length > 0
+      ? others[Math.floor(Math.random() * others.length)]
+      : pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  if (newKw && newKw !== state.keyword) {
+    fbUpdateKeyword(newKw);
+    if (state.roomId) fbSendSystemChat(state.roomId, `🏷️ 키워드 변경: "${newKw}"`);
+  }
+}
+
+// ══════════════════════════════════════════
+//  CHAT
+// ══════════════════════════════════════════
+function addChat(name, msg, isMe=false, charId=null) {
+  const char = charId ? CHARS.find(c => c.id === charId) : null;
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${isMe ? 'is-me' : ''}`;
+  div.innerHTML = `
+    <div class="chat-msg-header">
+      <span class="chat-msg-name" style="color:${char ? char.color : 'var(--text-dim)'}">${name}</span>
+      <span class="chat-msg-time">${timeStr()}</span>
+    </div>
+    <div class="chat-msg-body">${escHtml(msg)}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addSystemChat(msg) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg is-system';
+  div.innerHTML = `<div class="chat-msg-body">${escHtml(msg)}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('send-btn').addEventListener('click', () => {
+  sendChat();
+});
+
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  // 모바일(가상 키보드)은 엔터=줄바꿈, 데스크탑은 Shift+Enter=줄바꿈 / Enter=전송
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (e.key === 'Enter') {
+    if (isMobile) return; // 모바일: 기본 동작(줄바꿈) 허용
+    if (e.shiftKey) return; // 데스크탑 Shift+Enter: 줄바꿈
+    e.preventDefault();
+    sendChat();
+  }
+});
+
+// textarea 자동 높이 조절
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+});
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || !state.me) return;
+  fbSendChat(msg);
+  input.value = '';
+  input.style.height = 'auto';
+  // 모바일 키패드 유지: blur 없이 포커스 유지
+  input.focus();
+}
+
+// ══════════════════════════════════════════
+//  SONG SEARCH MODAL
+// ══════════════════════════════════════════
+function openSearchModal() {
+  const notice = document.getElementById('api-notice');
+  if (!ytApiKey) {
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+  document.getElementById('search-modal').classList.add('open');
+  setTimeout(() => document.getElementById('search-input').focus(), 100);
+}
+
+document.getElementById('modal-close').addEventListener('click', () => {
+  document.getElementById('search-modal').classList.remove('open');
+});
+
+document.getElementById('search-btn').addEventListener('click', doSearch);
+document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+async function doSearch() {
+  const query = document.getElementById('search-input').value.trim();
+  if (!query) return;
+  if (!ytApiKey) { toast('YouTube API 키를 먼저 입력해주세요!'); return; }
+
+  const resultsEl = document.getElementById('search-results');
+  resultsEl.innerHTML = '<div class="search-empty">🔍 검색 중...</div>';
+
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&maxResults=8&key=${ytApiKey}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) {
+      resultsEl.innerHTML = `<div class="search-empty">❌ 오류: ${data.error.message}<br><br>API 키를 확인해주세요.</div>`;
+      return;
+    }
+
+    if (!data.items || data.items.length === 0) {
+      resultsEl.innerHTML = '<div class="search-empty">검색 결과가 없습니다 🎵</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = data.items.map(item => `
+      <div class="search-result-item" data-vid="${item.id.videoId}" data-title="${escHtml(item.snippet.title)}" data-thumb="${item.snippet.thumbnails.default.url}">
+        <img class="result-thumb" src="${item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default.url}" alt="" loading="lazy">
+        <div class="result-info">
+          <div class="result-title">${escHtml(item.snippet.title)}</div>
+          <div class="result-channel">${escHtml(item.snippet.channelTitle)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    resultsEl.querySelectorAll('.search-result-item').forEach(item => {
+      item.addEventListener('click', () => selectSong(item.dataset.vid, item.dataset.title, item.dataset.thumb));
+    });
+
+  } catch(e) {
+    resultsEl.innerHTML = `<div class="search-empty">❌ 검색 실패. 네트워크를 확인하세요.</div>`;
+  }
+}
+
+function selectSong(videoId, title, thumb) {
+  if (!state.me) return;
+  const seatIndex = state.me.seatIndex;
+  const song = { id: videoId, title, thumb };
+  state.seats[seatIndex].song = song;
+  fbUpdateSong(seatIndex, song);
+  document.getElementById('search-modal').classList.remove('open');
+  renderSeats();
+  fbSendSystemChat(state.roomId, `${state.me.name}님이 "${title}" 를 선정했습니다 🎵`);
+  toast('노래 선정 완료! 🎵');
+}
+
+// ══════════════════════════════════════════
+//  YOUTUBE PLAYER
+// ══════════════════════════════════════════
+window.onYouTubeIframeAPIReady = function() {
+  ytReady = true;
+  ytPlayer = new YT.Player('yt-player', {
+    height: '1',
+    width: '1',
+    playerVars: { autoplay: 0, controls: 0 },
+    events: {
+      onStateChange: onPlayerStateChange
+    }
+  });
+};
+
+function onPlayerStateChange(event) {
+  const btn = document.getElementById('play-pause-btn');
+  if (event.data === YT.PlayerState.PLAYING) {
+    state.playing = true;
+    if (btn) btn.textContent = '⏸';
+    // 리듬 애니메이션 시작
+    state.seats.forEach((s, i) => { if (s && state.rhythmOn) startRhythm(i); });
+  } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+    state.playing = false;
+    if (btn) btn.textContent = '▶';
+    stopAllRhythm();
+    state.seats.forEach((_, idx) => stopCharAnim(idx));
+    if (event.data === YT.PlayerState.ENDED) {
+      // DJ 본인이 선정한 곡이 끝날 때만 ended 신호 전송
+      const djSeat = state.seats[state.currentDJIndex];
+      const amDJ = djSeat && state.me && djSeat.name === state.me.name;
+      const mySelectedSong = djSeat && djSeat.song;
+      const isMySelectedSong = mySelectedSong && state.currentSong &&
+        mySelectedSong.id === state.currentSong.id;
+      if (amDJ && isMySelectedSong && state.roomId && window._fbReady) {
+        const { db, ref, set } = window._fb;
+        set(ref(db, `rooms/${state.roomId}/songEnded`), { ts: Date.now(), djIndex: state.currentDJIndex });
+      }
+    }
+  }
+}
+
+function playCurrentDJSong() {
+  const djSeat = state.seats[state.currentDJIndex];
+  if (!djSeat || !djSeat.song) { toast('먼저 노래를 선정해주세요!'); return; }
+  if (!ytReady || !ytPlayer) { toast('YouTube 플레이어 로딩 중...'); return; }
+
+  const song = djSeat.song;
+  state.currentSong = song;
+
+  ytPlayer.loadVideoById(song.id);
+
+  // Show player bar
+  const bar = document.getElementById('player-bar');
+  bar.classList.remove('hidden');
+  document.getElementById('player-thumb').src = song.thumb || '';
+  document.getElementById('player-title').textContent = song.title;
+  document.getElementById('player-dj-name').textContent = `🎧 DJ: ${djSeat.name}`;
+
+  // 전체 브로드캐스트 (강제재생 포함)
+  fbBroadcastPlay(song, djSeat.name);
+
+
+  // 히스토리
+  const now2 = new Date();
+  const ts2 = `${now2.getHours().toString().padStart(2,'0')}:${now2.getMinutes().toString().padStart(2,'0')}`;
+  fbAddHistory({ title: song.title, thumb: song.thumb, djName: djSeat.name, keyword: state.keyword, time: ts2 });
+
+  fbSendSystemChat(state.roomId, `🎧 ${djSeat.name}DJ의 "${song.title}" 재생 시작!`);
+  toast(`▶ ${djSeat.name}DJ가 재생을 시작합니다!`);
+}
+
+function addToHistory({ title, thumb, djName, keyword }) {
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  state.history.unshift({ title, thumb, djName, keyword, time: timeStr });
+  renderHistory();
+  // Update badge
+  const badge = document.getElementById('history-badge');
+  badge.textContent = state.history.length;
+  badge.style.display = 'inline';
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+  if (!state.history.length) {
+    empty.style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = state.history.map((h, idx) => `
+    <div class="history-item">
+      <div style="font-family:var(--pixel);font-size:8px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;">${idx + 1}</div>
+      <img class="history-thumb" src="${h.thumb || ''}" alt="" onerror="this.style.display='none'">
+      <div class="history-info">
+        <div class="history-title" title="${escHtml(h.title)}">${escHtml(h.title)}</div>
+        <div class="history-meta"><span>${escHtml(h.djName)}</span> · ${escHtml(h.keyword)} · ${h.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Tab switching ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    const chatPanel = document.getElementById('panel-chat');
+    const histPanel = document.getElementById('panel-history');
+    chatPanel.style.display = tab === 'chat' ? 'flex' : 'none';
+    histPanel.style.display = tab === 'history' ? 'flex' : 'none';
+    if (tab === 'chat') {
+      requestAnimationFrame(() => {
+        const msgs = document.getElementById('chat-messages');
+        msgs.scrollTop = msgs.scrollHeight;
+      });
+    }
+    // Clear badge when viewing history
+    if (tab === 'history') {
+      document.getElementById('history-badge').style.display = 'none';
+    }
+  });
+});
+
+document.getElementById('play-pause-btn').addEventListener('click', () => {
+  if (!ytPlayer || !ytReady) return;
+  if (state.playing) {
+    ytPlayer.pauseVideo();
+  } else {
+    if (state.currentSong) ytPlayer.playVideo();
+    else playCurrentDJSong();
+  }
+});
+
+document.getElementById('stop-btn').addEventListener('click', () => {
+  if (!ytPlayer || !ytReady) return;
+  ytPlayer.stopVideo();
+  document.getElementById('player-bar').classList.add('hidden');
+  state.currentSong = null;
+  state.playing = false;
+  fbSendSystemChat(state.roomId, '재생이 멈췄습니다.');
+});
+
+let isMuted = false;
+let isPip = false;
+
+
+function showUnmuteBar() {
+  document.getElementById('unmute-bar').style.display = 'block';
+}
+
+function handleUnmute() {
+  if (!ytPlayer || !ytReady) return;
+  ytPlayer.unMute();
+  ytPlayer.setVolume(100);
+  isMuted = false;
+  document.getElementById('mute-btn').textContent = '🔊';
+  document.getElementById('mute-btn').style.color = '';
+  document.getElementById('unmute-bar').style.display = 'none';
+}
+
+document.getElementById('mute-btn').addEventListener('click', () => {
+  if (!ytPlayer || !ytReady) return;
+  if (isMuted) {
+    ytPlayer.unMute();
+    isMuted = false;
+    document.getElementById('mute-btn').textContent = '🔊';
+    document.getElementById('mute-btn').style.color = '';
+    document.getElementById('unmute-bar').style.display = 'none';
+  } else {
+    ytPlayer.mute();
+    isMuted = true;
+    document.getElementById('mute-btn').textContent = '🔇';
+    document.getElementById('mute-btn').style.color = 'var(--accent)';
+  }
+});
+
+// ══════════════════════════════════════════
+//  NEXT DJ
+// ══════════════════════════════════════════
+document.getElementById('next-dj-btn').addEventListener('click', () => {
+  const activeSeatCount = state.seats.filter(Boolean).length;
+  const prev = state.currentDJIndex;
+
+  // Find next occupied seat
+  let next = (state.currentDJIndex + 1) % 4;
+  for (let i = 0; i < 4; i++) {
+    if (state.seats[next]) break;
+    next = (next + 1) % 4;
+  }
+
+  state.currentDJIndex = next;
+  fbUpdateDJ(next);
+
+  if (ytPlayer && ytReady) {
+    ytPlayer.stopVideo();
+    state.playing = false;
+    state.currentSong = null;
+    document.getElementById('player-bar').classList.add('hidden');
+  }
+
+  renderSeats();
+  updateDJIndicator();
+  const newDJ = state.seats[state.currentDJIndex];
+  if (newDJ) {
+    fbSendSystemChat(state.roomId, `🎧 이제 ${newDJ.name}님이 DJ입니다! 노래를 선정하고 재생해주세요.`);
+    toast(`🎧 DJ: ${newDJ.name}`);
+  }
+});
+
+// ── 나가기 버튼
+document.getElementById('leave-btn').addEventListener('click', async () => {
+  if (!state.roomId || !state.me || !window._fbReady) {
+    location.reload(); return;
+  }
+  const { db, ref, set } = window._fb;
+  const myKey = `seat_${state.me.seatIndex}`;
+
+  // DJ였으면 먼저 다음 DJ 넘기기
+  const amDJ = state.seats[state.currentDJIndex] && state.seats[state.currentDJIndex].name === state.me.name;
+  if (amDJ) {
+    const occupied = state.seats.map((s,i) => s ? i : -1).filter(i => i >= 0 && i !== state.me.seatIndex);
+    if (occupied.length > 0) {
+      fbUpdateDJ(occupied[0]);
+      fbSendSystemChat(state.roomId, `🎧 ${state.me.name}님이 나갔습니다. 다음 DJ: ${state.seats[occupied[0]].name}`);
+    }
+  }
+
+  // 자리 제거
+  await set(ref(db, `rooms/${state.roomId}/seats/seat_${state.me.seatIndex}`), null);
+  fbSendSystemChat(state.roomId, `${state.me.name}님이 방을 나갔습니다 👋`);
+
+  // 상태 초기화 후 셋업 화면으로
+  if (ytPlayer && ytReady) { ytPlayer.stopVideo(); }
+  state.me = null;
+  state.roomId = null;
+  state.seats = [null, null, null, null];
+  state.currentSong = null;
+  state.playing = false;
+
+  document.getElementById('room-screen').classList.remove('active');
+  document.getElementById('setup-screen').classList.add('active');
+  document.getElementById('player-bar').classList.add('hidden');
+});
+
+// ══════════════════════════════════════════
+//  RHYTHM & EMOJI REACTIONS
+// ══════════════════════════════════════════
+
+// 리듬 애니메이션
+function startRhythm(seatIdx) {
+  const seat = document.querySelector(`.seat[data-seat="${seatIdx}"]`);
+  if (seat) seat.classList.add('is-bobbing');
+}
+function stopRhythm(seatIdx) {
+  const seat = document.querySelector(`.seat[data-seat="${seatIdx}"]`);
+  if (seat) seat.classList.remove('is-bobbing');
+}
+function stopAllRhythm() {
+  document.querySelectorAll('.seat').forEach(s => s.classList.remove('is-bobbing'));
+  state.rhythmOn = false;
+  const btn = document.getElementById('rhythm-btn');
+  if (btn) btn.classList.remove('rhythm-active');
+}
+
+// 이모지 파티클 날리기
+function launchEmoji(emoji) {
+  spawnEmojiLocally(emoji);
+  // 내 캐릭터 애니메이션 실행
+  if (state.me) {
+    const myIdx = state.seats.findIndex(s => s && s.name === state.me.name);
+    if (myIdx >= 0) {
+      const animClass = 'anim-' + (EMOJI_ANIM[emoji] || 'jump');
+      playCharAnim(myIdx, animClass, 700);
+    }
+  }
+  // Firebase로 브로드캐스트
+  if (state.roomId && window._fbReady) {
+    const { db, ref, push } = window._fb;
+    push(ref(db, `rooms/${state.roomId}/reactions`), { emoji, ts: Date.now(), senderName: state.me?.name });
+  }
+}
+
+function spawnEmojiLocally(emoji) {
+  const count = 25;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'emoji-particle';
+      el.textContent = emoji;
+      // 화면 전체 상단에서 랜덤 위치로 떨어짐
+      el.style.left = (Math.random() * 96) + 'vw';
+      el.style.fontSize = (22 + Math.random() * 22) + 'px';
+      const dur = 2.2 + Math.random() * 2.5;
+      el.style.animationDuration = dur + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), dur * 1000 + 100);
+    }, i * 60);
+  }
+}
+
+// 리듬 버튼 - 방 진입 후 바인딩
+function bindRhythmBtn() {
+  const btn = document.getElementById('rhythm-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    state.rhythmOn = !state.rhythmOn;
+    btn.classList.toggle('rhythm-active', state.rhythmOn);
+    if (state.rhythmOn) {
+      // 내 자리 dance 애니메이션 시작
+      const myIdx = state.seats.findIndex(s => s && state.me && s.name === state.me.name);
+      if (myIdx >= 0) { startRhythm(myIdx); playCharAnim(myIdx, 'anim-dance'); }
+      // Firebase 브로드캐스트
+      if (state.roomId && window._fbReady) {
+        const { db, ref, set } = window._fb;
+        set(ref(db, `rooms/${state.roomId}/rhythm/${state.me.name.replace(/[.#$[\]]/g,'_')}`), { on: true, ts: Date.now() });
+      }
+    } else {
+      const myIdx = state.seats.findIndex(s => s && state.me && s.name === state.me.name);
+      if (myIdx >= 0) { stopRhythm(myIdx); stopCharAnim(myIdx) }
+      if (state.roomId && window._fbReady) {
+        const { db, ref, set } = window._fb;
+        set(ref(db, `rooms/${state.roomId}/rhythm/${state.me.name.replace(/[.#$[\]]/g,'_')}`), { on: false, ts: Date.now() });
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+renderCharPicker();
+
+// ── API Key Popup (PWA / 키 없을 때) ──
+function showApiKeyPopupIfNeeded() {
+  if (!ytApiKey) {
+    document.getElementById('apikey-popup').classList.add('open');
+  }
+}
+
+document.getElementById('popup-save-btn').addEventListener('click', () => {
+  const val = document.getElementById('popup-api-input').value.trim();
+  if (!val) { return; }
+  ytApiKey = val;
+  localStorage.setItem('yt_api_key', val);
+  // setup 화면의 입력창도 동기화
+  const setupInput = document.getElementById('setup-api-key-input');
+  if (setupInput) { setupInput.value = val; setApiKeyStatus(val); }
+  document.getElementById('apikey-popup').classList.remove('open');
+  toast('API 키 저장됨 ✅');
+});
+
+document.getElementById('popup-skip-btn').addEventListener('click', () => {
+  document.getElementById('apikey-popup').classList.remove('open');
+});
+
+// ── Setup screen API key ──
+function setApiKeyStatus(key) {
+  const statusEl = document.getElementById('api-key-status');
+  if (!statusEl) return;
+  if (key && key.startsWith('AIza')) {
+    statusEl.textContent = '✅';
+  } else if (key) {
+    statusEl.textContent = '⚠️';
+  } else {
+    statusEl.textContent = '⬜';
+  }
+}
+
+// Load saved key into setup input
+const setupApiInput = document.getElementById('setup-api-key-input');
+if (ytApiKey) {
+  setupApiInput.value = ytApiKey;
+  setApiKeyStatus(ytApiKey);
+}
+
+// Auto-save on input (debounced)
+let apiKeyTimer = null;
+setupApiInput.addEventListener('input', () => {
+  clearTimeout(apiKeyTimer);
+  const val = setupApiInput.value.trim();
+  setApiKeyStatus(val);
+  apiKeyTimer = setTimeout(() => {
+    if (val) {
+      ytApiKey = val;
+      localStorage.setItem('yt_api_key', val);
+    } else {
+      ytApiKey = '';
+      localStorage.removeItem('yt_api_key');
+    }
+  }, 600);
+});
+
+// 마지막 방 카드 표시
+const lastRoomId = localStorage.getItem('last_room_id');
+const lastRoomName = localStorage.getItem('last_room_name');
+const lastRoomChar = localStorage.getItem('last_room_char');
+if (lastRoomId && lastRoomName) {
+  const card = document.getElementById('last-room-card');
+  const info = document.getElementById('last-room-info');
+  card.style.display = 'block';
+  info.textContent = `ROOM: ${lastRoomId}`;
+  document.getElementById('rejoin-btn').addEventListener('click', () => {
+    const name = document.getElementById('player-name').value.trim() || lastRoomName;
+    const charId = selectedChar || lastRoomChar || CHARS[0].id;
+    document.getElementById('player-name').value = name;
+    // 기존 방에 입장
+    if (!window._fbReady) { toast('Firebase 연결 중...'); return; }
+    const { db, ref, get } = window._fb;
+    get(ref(db, `rooms/${lastRoomId}`)).then(snap => {
+      if (!snap.exists()) { toast('방이 더 이상 존재하지 않아요'); return; }
+      const seats = snap.val().seats || {};
+      const taken = Object.values(seats).map(s => s.seatIndex);
+      const free = [0,1,2,3].find(i => !taken.includes(i));
+      if (free === undefined) { toast('방이 꽉 찼어요!'); return; }
+      enterRoom(lastRoomId, name, charId, free);
+    });
+  });
+}
+
+// ── Page Visibility API: 자리비움 감지
+document.addEventListener('visibilitychange', () => {
+  if (!state.roomId || !state.me || !window._fbReady) return;
+  const { db, ref, update } = window._fb;
+  const away = document.hidden;
+  update(ref(db, `rooms/${state.roomId}/seats/seat_${state.me.seatIndex}`), { away });
+});
+
+// ── Media Session API: 잠금화면 / 백그라운드 재생 컨트롤
+function updateMediaSession(title, djName, thumb) {
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: title || '뮤직룸',
+    artist: djName ? `DJ: ${djName}` : '뮤직룸',
+    album: `키워드: ${state.keyword || ''}`,
+    artwork: thumb ? [{ src: thumb, sizes: '96x96', type: 'image/jpeg' }] : []
+  });
+  navigator.mediaSession.setActionHandler('play', () => {
+    if (ytPlayer && ytReady) ytPlayer.playVideo();
+  });
+  navigator.mediaSession.setActionHandler('pause', () => {
+    if (ytPlayer && ytReady) ytPlayer.pauseVideo();
+  });
+}
+
+// ── Service Worker 등록 (PWA 오프라인/백그라운드)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// Check if joining from link
+const urlParams = new URLSearchParams(location.search);
+const roomFromUrl = urlParams.get('room');
+if (roomFromUrl) {
+  document.getElementById('room-code-input').value = roomFromUrl;
+  document.getElementById('room-code-input').dispatchEvent(new Event('input'));
+}
+
+// ytkey from URL param
+const ytKeyFromUrl = urlParams.get('ytkey');
+if (ytKeyFromUrl) {
+  ytApiKey = ytKeyFromUrl;
+  localStorage.setItem('yt_api_key', ytKeyFromUrl);
+  setupApiInput.value = ytKeyFromUrl;
+  setApiKeyStatus(ytKeyFromUrl);
+}
+</script>
+</body>
+</html>
