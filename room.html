@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>🎵 뮤직룸</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0d1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="뮤직룸">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nanum+Gothic:wght@400;700;800&display=swap');
 
@@ -2549,6 +2557,20 @@ document.addEventListener('visibilitychange',()=>{
   const{db,ref,update}=window._fb;
   update(ref(db,`rooms/${state.roomId}/seats/seat_${state.me.seatIndex}`),{away:document.hidden});
 });
+
+// ── SERVICE WORKER 등록
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js', { scope: '/music-room/' })
+    .then(reg => console.log('SW registered:', reg.scope))
+    .catch(err => console.warn('SW failed:', err));
+}
+
+// SW keep-alive ping — 백그라운드에서 SW가 종료되지 않도록 30초마다 ping
+setInterval(() => {
+  if (!navigator.serviceWorker.controller) return;
+  const mc = new MessageChannel();
+  navigator.serviceWorker.controller.postMessage('keepalive', [mc.port2]);
+}, 30000);
 
 // ── START
 // Firebase 준비되면 입장
