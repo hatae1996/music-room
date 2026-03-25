@@ -579,70 +579,102 @@
 
   /* MOBILE */
   @media (max-width: 768px) {
-    #room-screen { height:auto!important;overflow-y:auto!important; }
-    .room-layout { display:flex!important;flex-direction:column!important;height:auto!important; }
-    .stage-area { flex-shrink:0!important;height:auto!important; }
-    .seats-container { height:340px!important;min-height:340px!important;flex:none!important;overflow:hidden!important; }
-    .seat { padding:8px 6px!important;gap:4px!important; }
-    .seat canvas.sprite { transform:scale(0.75);transform-origin:top center; }
+    /* 전체 레이아웃 */
+    #room-screen { height:auto!important; overflow-y:auto!important; }
+    .room-layout { display:flex!important; flex-direction:column!important; height:auto!important; }
+    .stage-area { flex-shrink:0!important; height:auto!important; }
+
+    /* 자리 */
+    .seats-container { height:320px!important; min-height:320px!important; flex:none!important; overflow:hidden!important; }
+    .seat { padding:6px 4px!important; gap:3px!important; }
+    .seat canvas.sprite { transform:scale(0.7); transform-origin:top center; }
     .center-keyword { width:110px; }
     .keyword-text { font-size:9px!important; }
-    .next-theme-card { bottom:auto!important;top:6px!important;right:6px!important; }
+    .next-theme-card { bottom:auto!important; top:6px!important; right:6px!important; }
     .next-theme-sub { display:none!important; }
-    .player-bar { padding:8px 12px;min-height:60px; }
-    .ctrl-btn { width:40px!important;height:40px!important;font-size:15px!important; }
-    .ctrl-btn.play-btn { width:48px!important;height:48px!important;font-size:20px!important; }
-    .right-panel {
-      border-left:none!important;
-      border-top:2px solid var(--border);
-      display:flex!important;
-      flex-direction:column!important;
-      height:420px!important;
-      min-height:420px!important;
-      max-height:420px!important;
-      flex-shrink:0!important;
-      overflow:hidden!important;
-    }
-    .tab-bar { flex-shrink:0!important; }
-    .panel-section { flex-shrink:0!important; }
-    #panel-chat {
-      height:100%!important;
-      min-height:0!important;
-      max-height:none!important;
-      flex:1!important;
-      display:flex!important;
-      flex-direction:column!important;
-      overflow:hidden!important;
-    }
-    #panel-playlist {
-      height:100%!important;
-      min-height:0!important;
-      flex:1!important;
-      display:flex!important;
-      flex-direction:column!important;
-      overflow:hidden!important;
-    }
-    #panel-history {
-      flex:1!important;
-      overflow-y:auto!important;
-      min-height:0!important;
-    }
-    .chat-messages {
-      flex:1!important;
-      overflow-y:auto!important;
-      min-height:0!important;
-      -webkit-overflow-scrolling:touch;
-    }
-    .chat-input-area { flex-shrink:0!important; }
-    .chat-input-area textarea, .chat-input-area .pixel-input { font-size:14px!important; }
+
+    /* 자리 안 버튼들 — 재생 버튼 포함 */
+    .seat-name { font-size:7px!important; }
+    .seat-song { font-size:10px!important; max-width:100px!important; -webkit-line-clamp:1!important; }
+    .pick-song-btn { font-size:6px!important; padding:4px 7px!important; }
+    .ctrl-btn.play-btn#my-play-btn,
+    button#my-play-btn { font-size:7px!important; padding:4px 8px!important; width:auto!important; height:auto!important; }
+    .kick-btn { font-size:5px!important; padding:2px 6px!important; }
+
+    /* 플레이어 바 */
+    .player-bar { padding:8px 12px; min-height:60px; }
+    .ctrl-btn { width:36px!important; height:36px!important; font-size:14px!important; }
+    .ctrl-btn.play-btn { width:44px!important; height:44px!important; font-size:18px!important; }
+    #save-now-playing-btn { font-size:5px!important; padding:3px 6px!important; }
+
+    /* 탑바 */
     .topbar { padding:6px 10px; }
     .room-logo { font-size:8px!important; }
-    .room-id-display { font-size:6px!important;padding:4px 7px; }
-    .next-dj-btn, #leave-btn, #dj-refuse-btn { font-size:7px!important;padding:5px 8px; }
-    .tab-btn { font-size:7px!important; padding:8px 4px!important; }
+    .room-id-display { font-size:6px!important; padding:4px 7px; }
+    .next-dj-btn, #leave-btn, #dj-refuse-btn { font-size:6px!important; padding:4px 7px!important; }
     .users-bar { display:none; }
+
+    /* 리액션 */
     .reaction-bar { padding:6px 10px; }
-    .reaction-btn { font-size:20px;padding:5px 7px; }
+    .reaction-btn { font-size:20px; padding:5px 7px; }
+
+    /* ── 우측 패널: 키워드 숨기고 탭+채팅만 보이게 ── */
+    .right-panel {
+      border-left: none!important;
+      border-top: 2px solid var(--border);
+      display: flex!important;
+      flex-direction: column!important;
+      /* 뷰포트 높이에서 위 영역 빼고 채움 */
+      height: 55vw!important;
+      min-height: 280px!important;
+      max-height: 400px!important;
+      flex-shrink: 0!important;
+      overflow: hidden!important;
+    }
+
+    /* 모바일에서 keywords 섹션 숨김 (공간 확보) */
+    .right-panel .panel-section { display:none!important; }
+
+    /* 탭바 */
+    .tab-bar { flex-shrink:0!important; }
+    .tab-btn { font-size:7px!important; padding:10px 4px!important; }
+
+    /* 각 패널: !important 없이 flex로 자연스럽게 채움 */
+    /* switchTab()이 display를 직접 제어하므로 !important 금지 */
+    #panel-chat {
+      min-height: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #panel-playlist {
+      min-height: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #panel-history {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      padding: 8px;
+    }
+
+    /* 채팅 메시지 스크롤 */
+    .chat-messages {
+      flex: 1!important;
+      overflow-y: auto!important;
+      min-height: 0!important;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chat-input-area { flex-shrink:0!important; }
+    .chat-input-area textarea,
+    .chat-input-area .pixel-input { font-size:14px!important; }
+
+    /* 플레이리스트 바디 스크롤 */
+    .playlist-body { -webkit-overflow-scrolling: touch; }
   }
 
   canvas.sprite { image-rendering:pixelated; }
@@ -2380,8 +2412,13 @@ function switchTab(active) {
     if (!btn || !panel) return;
     const isActive = t === active;
     btn.classList.toggle('active', isActive);
-    if (t === 'chat') panel.style.display = isActive ? 'flex' : 'none';
-    else panel.style.display = isActive ? 'flex' : 'none';
+    // history는 block, 나머지는 flex (inline style로 CSS !important 우선)
+    if (isActive) {
+      panel.style.setProperty('display', t === 'history' ? 'block' : 'flex', 'important');
+      panel.style.setProperty('flex', '1', 'important');
+    } else {
+      panel.style.setProperty('display', 'none', 'important');
+    }
   });
   if (active === 'history') renderHistory();
   if (active === 'playlist') renderPlaylist();
