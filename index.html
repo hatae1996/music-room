@@ -1363,161 +1363,121 @@
   /* ════════ MOBILE ════════ */
   @media (max-width: 768px) {
 
-    /* 전체 화면을 flex column으로 */
+    /* 전체: 스크롤 가능하게 */
     #room-screen {
-      height: 100dvh !important;
+      height: auto !important;
+      min-height: 100dvh !important;
+      overflow-y: auto !important;
       display: flex !important;
       flex-direction: column !important;
-      overflow: hidden !important;
     }
 
-    .topbar {
-      flex-shrink: 0;
-      padding: 8px 12px;
-      flex-wrap: nowrap;
-      overflow: hidden;
-    }
-    .room-logo { font-size: 9px !important; }
-    .room-id-display { font-size: 7px !important; padding: 4px 6px; }
-    .next-dj-btn { font-size: 7px !important; padding: 5px 8px; }
-    #leave-btn { font-size: 7px !important; padding: 5px 8px; }
-    .users-bar { display: none; }
-
-    /* room-layout: 스테이지 고정 + 패널 나머지 */
     .room-layout {
       display: flex !important;
       flex-direction: column !important;
-      flex: 1 !important;
-      height: 0 !important;
+      height: auto !important;
       min-height: 0 !important;
-      overflow: hidden !important;
+      overflow: visible !important;
     }
 
-    /* 스테이지: 고정 높이 */
+    /* 스테이지 */
     .stage-area {
       flex-shrink: 0 !important;
       height: auto !important;
-      min-height: 0 !important;
       display: flex !important;
       flex-direction: column !important;
     }
-    .dj-indicator { order: -1; }
+
     .seats-container {
       height: 340px !important;
       min-height: 340px !important;
       flex: none !important;
       overflow: hidden !important;
-      order: 0;
     }
-    /* DJ 빔 모바일에서 잘리게 */
+
     .seat.is-dj { overflow: hidden !important; }
-    .seat { padding: 8px 6px; gap: 4px; }
-    .dj-crown { font-size: 12px; }
-    .seat-name { font-size: 7px !important; }
-    .seat-song { font-size: 9px; max-width: 100px; }
-    .pick-song-btn { font-size: 6px !important; padding: 3px 6px; }
-    .center-keyword {
-      width: 110px;
-      top: 50% !important;
-      left: 50% !important;
-      transform: translate(-50%, -50%) !important;
-    }
+
+    /* 중앙 테마 */
+    .center-keyword { width: 110px; }
+    .keyword-text { font-size: 9px !important; }
+    .keyword-label { font-size: 5px !important; }
+    .keyword-badge { padding: 6px 8px; }
+
+    /* Next theme - 우측 상단 */
     .next-theme-card {
       bottom: auto !important;
       top: 6px !important;
       right: 6px !important;
-      font-size: 0.85em;
     }
-    .next-theme-badge {
-      padding: 4px 8px !important;
-    }
-    .next-theme-text {
-      font-size: 7px !important;
-    }
-    .next-theme-sub {
-      font-size: 5px !important;
-      display: none !important;
-    }
-    .keyword-text { font-size: 9px !important; }
-    .keyword-label { font-size: 5px !important; }
-    .keyword-badge { padding: 6px 8px; }
-    .seat canvas.sprite { width: 44px !important; height: 44px !important; }
-    .dj-indicator { font-size: 6px; padding: 2px 6px; top: 4px; }
+    .next-theme-badge { padding: 4px 8px !important; }
+    .next-theme-text { font-size: 7px !important; }
+    .next-theme-sub { display: none !important; }
 
+    /* DJ 인디케이터 */
+    .dj-indicator { font-size: 7px; padding: 3px 8px; top: 4px; }
+
+    /* 플레이어 바 */
     .player-bar {
-      flex-shrink: 0 !important;
-      padding: 8px 12px !important;
-      min-height: 60px !important;
-      gap: 10px !important;
-      z-index: 100 !important;
-      position: relative !important;
-      order: 999 !important;
+      flex-shrink: 0;
+      padding: 10px 14px;
+      min-height: 64px;
+      gap: 12px;
     }
     .player-bar.hidden { display: none !important; }
-    .player-thumb { width: 40px; height: 40px; }
-    .player-title { font-size: 7px !important; }
-    .player-dj { font-size: 10px; }
-    .ctrl-btn { width: 44px !important; height: 44px !important; font-size: 16px !important; }
-    .ctrl-btn.play-btn { width: 50px !important; height: 50px !important; font-size: 20px !important; }
-    .player-controls { gap: 10px !important; }
+    .player-thumb { width: 42px; height: 42px; }
+    .player-title { font-size: 8px !important; }
+    .ctrl-btn { width: 40px; height: 40px; font-size: 15px; }
+    .ctrl-btn.play-btn { width: 48px; height: 48px; font-size: 20px; }
+    .player-controls { gap: 10px; }
 
-    /* 리액션 바: 가로 스크롤로 한 줄 */
+    /* 리액션 바 */
     .reaction-bar {
       flex-shrink: 0;
-      padding: 6px 10px;
-      gap: 4px;
+      padding: 8px 12px;
+      gap: 6px;
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
-      order: 2;
     }
     .reaction-bar::-webkit-scrollbar { display: none; }
-    .reaction-btn { padding: 4px 8px; font-size: 18px; flex-shrink: 0; }
+    .reaction-btn { padding: 6px 10px; font-size: 20px; flex-shrink: 0; }
     .reaction-label { display: none; }
 
-    /* 우측 패널: 나머지 공간 전부 */
+    /* 우측 패널 */
     .right-panel {
-      flex: 1 !important;
+      flex: none !important;
+      height: auto !important;
       min-height: 0 !important;
-      overflow: hidden !important;
+      overflow: visible !important;
       border-left: none !important;
       border-top: 2px solid var(--border);
-      display: flex !important;
-      flex-direction: column !important;
     }
 
-    /* 키워드 섹션 */
-    .panel-section {
-      flex-shrink: 0;
-      padding: 6px 12px;
-    }
-    .panel-section-title { font-size: 8px !important; margin-bottom: 5px; }
+    /* 키워드 */
+    .panel-section { flex-shrink: 0; padding: 10px 14px; }
+    .panel-section-title { font-size: 9px !important; margin-bottom: 8px; }
     .keywords-list {
-      gap: 4px;
-      margin-bottom: 5px;
       flex-wrap: nowrap !important;
       overflow-x: auto;
       scrollbar-width: none;
       padding-bottom: 2px;
     }
     .keywords-list::-webkit-scrollbar { display: none; }
-    .keyword-tag { font-size: 8px !important; padding: 3px 7px; flex-shrink: 0; }
-    .btn-small { font-size: 7px !important; padding: 5px; }
-    .keyword-actions { margin-bottom: 5px; }
-    .keyword-input-row { gap: 4px; }
-    .keyword-input-row .pixel-input { font-size: 13px; padding: 5px 8px; }
+    .keyword-tag { font-size: 8px !important; padding: 4px 8px; flex-shrink: 0; }
+    .btn-small { font-size: 7px !important; padding: 6px; }
+    .keyword-input-row .pixel-input { font-size: 13px; padding: 7px 10px; }
 
-    /* 탭 바 */
+    /* 탭 */
     .tab-bar { flex-shrink: 0; }
-    .tab-btn { font-size: 9px !important; padding: 9px; }
+    .tab-btn { font-size: 10px !important; padding: 10px; }
 
-    /* 채팅 패널: 남은 공간 전부 */
+    /* 채팅 - 높이 고정 */
     #panel-chat {
-      flex: 1 !important;
-      min-height: 0 !important;
-      overflow: hidden !important;
+      height: 300px !important;
+      min-height: 300px !important;
       display: flex !important;
       flex-direction: column !important;
+      overflow: hidden !important;
     }
     .chat-section {
       flex: 1 !important;
@@ -1526,33 +1486,30 @@
     }
     .chat-messages {
       flex: 1 !important;
-      min-height: 0 !important;
       height: 0 !important;
       overflow-y: auto !important;
     }
-    .chat-msg-body { font-size: 13px; }
-    .chat-msg-name { font-size: 8px !important; }
-
-    /* 채팅 입력창 */
     .chat-input-area {
       flex-shrink: 0 !important;
-      padding: 8px 10px;
-      gap: 6px;
+      padding: 8px 12px;
     }
     .chat-input-area textarea,
-    .chat-input-area .pixel-input {
-      font-size: 14px !important;
-      padding: 10px 12px !important;
-      min-height: 44px;
-    }
-    .send-btn { font-size: 10px; padding: 10px 14px; flex-shrink: 0; }
+    .chat-input-area .pixel-input { font-size: 14px !important; }
+    .send-btn { font-size: 10px; padding: 10px 14px; }
 
     /* 히스토리 */
     #panel-history {
-      flex: 1 !important;
-      min-height: 0 !important;
+      height: 300px !important;
+      min-height: 300px !important;
       overflow-y: auto !important;
     }
+
+    /* 상단바 */
+    .topbar { padding: 8px 12px; }
+    .room-logo { font-size: 9px !important; }
+    .room-id-display { font-size: 7px !important; padding: 4px 8px; }
+    .next-dj-btn, #leave-btn { font-size: 7px !important; padding: 5px 8px; }
+    .users-bar { display: none; }
 
     #yt-player-container { right: 10px; bottom: 10px; }
   }
@@ -2416,7 +2373,7 @@ await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, colorId, se
     toast('🎉 새 라운드 시작! 노래를 선정해주세요');
   });
 
-  // 재생 중인 곡 — ts 기반으로 항상 트리거
+  // 재생 중인 곡 — ts 기반으로 항상 트리거 (DJ 포함 모두)
   let lastPlayTs = 0;
   onValue(ref(db, `rooms/${roomId}/nowPlaying`), snap => {
     if (!snap.exists()) return;
@@ -2427,8 +2384,12 @@ await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, colorId, se
 
     state.currentSong = { id: np.videoId, title: np.title, thumb: np.thumb };
 
-    const djSeat = state.seats[state.currentDJIndex];
-    const amDJ = djSeat && state.me && djSeat.name === state.me.name;
+    // UI 업데이트 (모든 참여자)
+    document.getElementById('player-bar').classList.remove('hidden');
+    document.getElementById('player-thumb').src = np.thumb || '';
+    document.getElementById('player-title').textContent = np.title;
+    document.getElementById('player-dj-name').textContent = `🎧 DJ: ${np.djName}`;
+    updateMediaSession(np.title, np.djName, np.thumb);
 
     const doPlay = () => {
       if (ytReady && ytPlayer) {
