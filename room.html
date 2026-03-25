@@ -142,6 +142,15 @@
   }
   .seat.is-me { background: rgba(0,255,136,0.04); }
   .seat.empty { opacity: 0.4; }
+  .seat.is-away { opacity: 0.5; }
+  .seat.is-away canvas.sprite { filter: grayscale(80%); }
+  .away-badge {
+    position: absolute; top: 6px; right: 6px;
+    font-family: var(--pixel); font-size: 6px;
+    color: var(--text-dim); background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 5px; letter-spacing: 1px;
+  }
 
   .seat-player-info { display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1; }
   .dj-crown { font-size:16px; display:none; animation: bob 1s ease-in-out infinite; }
@@ -571,7 +580,8 @@ function renderSeats() {
     const isDJ = i === state.currentDJIndex;
     const isEmpty = !seat;
     const div = document.createElement('div');
-    div.className = `seat${isDJ?' is-dj':''}${isMe?' is-me':''}${isEmpty?' empty':''}`;
+    const isAway = seat && seat.away && !isMe;
+    div.className = `seat${isDJ?' is-dj':''}${isMe?' is-me':''}${isEmpty?' empty':''}${isAway?' is-away':''}`;
     div.dataset.seat = i;
 
     if (isEmpty) {
@@ -581,6 +591,7 @@ function renderSeats() {
       const hasSong = seat.song != null;
       const isMyTurn = isMe && isDJ;
       div.innerHTML = `
+        ${isAway ? '<div class="away-badge">자리비움</div>' : ''}
         <div class="dj-crown">👑</div>
         <div class="seat-player-info">
           <canvas class="sprite" id="sprite-${i}" data-char="${seat.charId}" width="64" height="64"></canvas>
