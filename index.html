@@ -3221,7 +3221,6 @@ document.getElementById('leave-btn').addEventListener('click', async () => {
   // 프로필 다시 불러오기 (저장된 캐릭터/색상 표시)
   loadProfile();
   renderCharPicker();
-  showLastRoomCard();
 });
 
 // ══════════════════════════════════════════
@@ -3311,10 +3310,64 @@ function bindRhythmBtn() {
 //  INIT
 // ══════════════════════════════════════════
 // 캐릭터 피커는 Firebase 없이 즉시 실행
+// ── 세션 복구 함수
+async function tryRestoreSession() {
+  const saved = localStorage.getItem('musicroom_session');
+  if (!saved) return false;
+  try {
+    const session = JSON.parse(saved);
+    if (Date.now() - session.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('musicroom_session');
+      return false;
+    }
+    let waited = 0;
+    while (!window._fbReady && waited < 5000) {
+      await new Promise(r => setTimeout(r, 200));
+      waited += 200;
+    }
+    if (!window._fbReady) return false;
+    const { db, ref, get, update } = window._fb;
+    const snap = await get(ref(db, `rooms/${session.roomId}/seats/seat_${session.seatIndex}`));
+    if (snap.exists()) {
+      const seatData = snap.val();
+      if (seatData && seatData.name === session.name) {
+        await update(ref(db, `rooms/${session.roomId}/seats/seat_${session.seatIndex}`), { away: false });
+        selectedChar = session.charId || selectedChar;
+        selectedColor = session.colorId || selectedColor;
+        await enterRoom(session.roomId, session.name, session.charId, session.seatIndex);
+        return true;
+      }
+    }
+    localStorage.removeItem('musicroom_session');
+    return false;
+  } catch(e) {
+    localStorage.removeItem('musicroom_session');
+    return false;
+  }
+}
+
+function showLastRoomCard() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('musicroom_session') || '{}');
+    if (!saved.roomId || Date.now() - saved.savedAt > 24 * 60 * 60 * 1000) return;
+    const card = document.getElementById('last-room-card');
+    const roomIdEl = document.getElementById('last-room-id');
+    if (!card || !roomIdEl) return;
+    roomIdEl.textContent = 'ROOM: ' + saved.roomId;
+    card.style.display = 'flex';
+    document.getElementById('last-room-rejoin').addEventListener('click', () => {
+      tryRestoreSession();
+    });
+  } catch(e) {}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   renderCharPicker();
   showApiKeyPopupIfNeeded();
+  tryRestoreSession().then(restored => {
+    if (!restored) showLastRoomCard();
+  });
 });
 
 // ── API Key Popup (PWA / 키 없을 때) ──
