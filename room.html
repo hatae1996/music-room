@@ -425,7 +425,7 @@
       <div id="panel-chat">
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-area">
-          <input type="text" class="pixel-input" id="chat-input" placeholder="메시지 입력..." maxlength="100">
+          <textarea class="pixel-input" id="chat-input" placeholder="메시지 입력..." maxlength="200" rows="1" style="resize:none;overflow:hidden;line-height:1.4;padding:10px 12px;font-family:var(--body);font-size:14px;"></textarea>
           <button class="send-btn" id="send-btn">SEND</button>
         </div>
       </div>
@@ -1156,14 +1156,36 @@ function addKeyword() {
 }
 
 // ── CHAT UI
-document.getElementById('send-btn').addEventListener('click',sendChat);
-document.getElementById('chat-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
-function sendChat(){
-  const input=document.getElementById('chat-input');
-  const msg=input.value.trim();
-  if(!msg||!state.me)return;
+// 채팅 입력창 자동 높이
+const chatInput = document.getElementById('chat-input');
+chatInput.addEventListener('input', () => {
+  chatInput.style.height = 'auto';
+  chatInput.style.height = Math.min(chatInput.scrollHeight, 80) + 'px';
+});
+
+document.getElementById('send-btn').addEventListener('click', () => {
+  sendChat();
+  // 키보드 유지: 포커스 다시 설정
+  chatInput.focus();
+});
+
+chatInput.addEventListener('keydown', e => {
+  // PC: 엔터 전송 / 모바일: 엔터 줄바꿈
+  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+  if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+    e.preventDefault();
+    sendChat();
+  }
+  // 모바일은 기본 엔터(줄바꿈) 동작 허용
+});
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || !state.me) return;
   fbSendChat(msg);
-  input.value='';
+  input.value = '';
+  input.style.height = 'auto';
 }
 
 // ── TABS
