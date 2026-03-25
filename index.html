@@ -2436,6 +2436,12 @@ await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, colorId, se
     updateMediaSession(np.title, np.djName, np.thumb);
   });
 
+  // 재입장을 위해 내 정보 localStorage에 저장
+  localStorage.setItem('musicroom_session', JSON.stringify({
+    roomId, name, charId: state.me.charId, colorId: state.me.colorId, seatIndex: state.me.seatIndex,
+    savedAt: Date.now()
+  }));
+
   fbSendSystemChat(roomId, `${name}님이 입장했습니다 🎉`);
 
   // 리듬 리스너
@@ -2956,12 +2962,14 @@ function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.PLAYING) {
     state.playing = true;
     if (btn) btn.textContent = '⏸';
+    requestWakeLock(); // 백그라운드 재생 유지
     // 리듬 애니메이션 시작
     state.seats.forEach((s, i) => { if (s && state.rhythmOn) startRhythm(i); });
   } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
     state.playing = false;
     if (btn) btn.textContent = '▶';
     stopAllRhythm();
+    if (event.data === YT.PlayerState.PAUSED) releaseWakeLock();
     state.seats.forEach((_, idx) => stopCharAnim(idx));
     if (event.data === YT.PlayerState.ENDED) {
       // DJ 본인이 선정한 곡이 끝날 때만 ended 신호 전송
@@ -3181,6 +3189,9 @@ document.getElementById('leave-btn').addEventListener('click', async () => {
   state.currentSong = null;
   state.playing = false;
 
+  // 세션 삭제 (정상 나가기)
+  localStorage.removeItem('musicroom_session');
+
   document.getElementById('room-screen').classList.remove('active');
   document.getElementById('setup-screen').classList.add('active');
   document.getElementById('player-bar').classList.add('hidden');
@@ -3370,6 +3381,32 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Media Session API: 잠금화면 / 백그라운드 재생 컨트롤
+// ── Wake Lock (백그라운드 재생 유지)
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (wakeLock) return; // 이미 획득
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch(e) {}
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    await wakeLock.release();
+    wakeLock = null;
+  }
+}
+
+// 페이지 복귀 시 wake lock 재획득
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && state.playing) {
+    await requestWakeLock();
+  }
+});
+
 function updateMediaSession(title, djName, thumb) {
   if (!('mediaSession' in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({
