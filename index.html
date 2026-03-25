@@ -1398,12 +1398,16 @@
       flex-shrink: 0 !important;
       height: auto !important;
       min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
     }
+    .dj-indicator { order: -1; }
     .seats-container {
       height: 340px !important;
       min-height: 340px !important;
       flex: none !important;
       overflow: hidden !important;
+      order: 0;
     }
     /* DJ 빔 모바일에서 잘리게 */
     .seat.is-dj { overflow: hidden !important; }
@@ -1441,20 +1445,21 @@
     .dj-indicator { font-size: 6px; padding: 2px 6px; top: 4px; }
 
     .player-bar {
-      flex-shrink: 0;
-      padding: 8px 12px;
-      min-height: 60px;
-      gap: 10px;
-      z-index: 20;
-      position: relative;
+      flex-shrink: 0 !important;
+      padding: 8px 12px !important;
+      min-height: 60px !important;
+      gap: 10px !important;
+      z-index: 100 !important;
+      position: relative !important;
+      order: 999 !important;
     }
     .player-bar.hidden { display: none !important; }
     .player-thumb { width: 40px; height: 40px; }
     .player-title { font-size: 7px !important; }
     .player-dj { font-size: 10px; }
-    .ctrl-btn { width: 36px; height: 36px; font-size: 14px; }
-    .ctrl-btn.play-btn { width: 44px; height: 44px; font-size: 18px; }
-    .player-controls { gap: 8px; }
+    .ctrl-btn { width: 44px !important; height: 44px !important; font-size: 16px !important; }
+    .ctrl-btn.play-btn { width: 50px !important; height: 50px !important; font-size: 20px !important; }
+    .player-controls { gap: 10px !important; }
 
     /* 리액션 바: 가로 스크롤로 한 줄 */
     .reaction-bar {
@@ -1464,6 +1469,7 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
+      order: 2;
     }
     .reaction-bar::-webkit-scrollbar { display: none; }
     .reaction-btn { padding: 4px 8px; font-size: 18px; flex-shrink: 0; }
