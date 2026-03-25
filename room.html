@@ -81,6 +81,55 @@
     background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
     padding: 6px 10px; font-family: var(--pixel); font-size: 7px; cursor: pointer;
   }
+  /* DJ 거부권 토글 */
+  #dj-refuse-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    padding: 6px 10px; font-family: var(--pixel); font-size: 7px; cursor: pointer; white-space: nowrap;
+    transition: all 0.2s;
+  }
+  #dj-refuse-btn.active {
+    border-color: #ff8c00; color: #ff8c00; background: rgba(255,140,0,0.1);
+  }
+  /* DJ 신청 모달 */
+  #dj-request-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200;
+    display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  }
+  #dj-request-modal.open { display: flex; }
+  .dj-request-box {
+    background: var(--surface); border: 2px solid var(--accent); width: 320px;
+    box-shadow: 0 0 40px rgba(233,69,96,0.3), 6px 6px 0 rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .dj-request-box::before {
+    content:''; position:absolute; top:-1px; left:-1px; right:-1px; height:3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .dj-request-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dj-request-title { font-family: var(--pixel); font-size: 9px; color: var(--text); }
+  .dj-request-close {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    width: 28px; height: 28px; cursor: pointer; font-size: 14px;
+  }
+  .dj-request-list { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .dj-request-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--border); cursor: pointer;
+    transition: all 0.15s; background: var(--bg);
+  }
+  .dj-request-item:hover:not(.refused) { border-color: var(--accent); background: rgba(233,69,96,0.05); }
+  .dj-request-item.refused { opacity: 0.4; cursor: not-allowed; border-color: #ff4444; }
+  .dj-request-name { font-family: var(--pixel); font-size: 8px; color: var(--text); flex: 1; }
+  .dj-request-song { font-size: 11px; color: var(--accent2); margin-top: 2px; }
+  .dj-request-badge {
+    font-family: var(--pixel); font-size: 6px; padding: 3px 6px;
+    border: 1px solid; letter-spacing: 1px;
+  }
+  .dj-request-badge.refused { color: #ff4444; border-color: #ff4444; }
+  .dj-request-badge.no-song { color: var(--text-dim); border-color: var(--border); }
 
   /* MAIN LAYOUT */
   .room-layout {
@@ -382,7 +431,7 @@
     .topbar { padding:6px 10px; }
     .room-logo { font-size:8px!important; }
     .room-id-display { font-size:6px!important;padding:4px 7px; }
-    .next-dj-btn, #leave-btn { font-size:7px!important;padding:5px 8px; }
+    .next-dj-btn, #leave-btn, #dj-refuse-btn { font-size:7px!important;padding:5px 8px; }
     .users-bar { display:none; }
     .reaction-bar { padding:6px 10px; }
     .reaction-btn { font-size:20px;padding:5px 7px; }
@@ -405,6 +454,7 @@
     </div>
     <div class="topbar-right">
       <div class="room-id-display" id="room-id-display" title="클릭해서 링크 복사">📋 ROOM: ------</div>
+      <button id="dj-refuse-btn" title="활성화하면 DJ 순번에서 제외됩니다">🚫 DJ 거부</button>
       <button class="next-dj-btn" id="next-dj-btn" style="display:none">▶ NEXT DJ</button>
       <button id="leave-btn">🚪 나가기</button>
     </div>
@@ -483,6 +533,17 @@
 
       <div id="panel-history"></div>
     </div>
+  </div>
+</div>
+
+<!-- DJ Request Modal -->
+<div id="dj-request-modal">
+  <div class="dj-request-box">
+    <div class="dj-request-header">
+      <div class="dj-request-title">🎧 다음 DJ 지목</div>
+      <button class="dj-request-close" id="dj-request-close">✕</button>
+    </div>
+    <div class="dj-request-list" id="dj-request-list"></div>
   </div>
 </div>
 
@@ -825,6 +886,7 @@ const state = {
   history: [],
   rhythmOn: false,
   _djRound: [],
+  djRefuse: false,
 };
 
 let ytPlayer = null, ytReady = false;
@@ -1076,6 +1138,53 @@ function fbAddHistory(entry) {
   const {db,ref,push} = window._fb;
   push(ref(db,`rooms/${state.roomId}/history`),{...entry,ts:Date.now()});
 }
+function fbSetDJRefuse(on) {
+  if (!state.roomId||!state.me||!window._fbReady) return;
+  const {db,ref,update} = window._fb;
+  update(ref(db,`rooms/${state.roomId}/seats/seat_${state.me.seatIndex}`),{djRefuse:on});
+}
+// DJ 신청 모달 열기 (현재 DJ가 NEXT DJ 누를 때)
+function openDJRequestModal() {
+  const list = document.getElementById('dj-request-list');
+  list.innerHTML = '';
+  const occupied = state.seats.map((s,i)=>s?i:-1).filter(i=>i>=0&&i!==state.currentDJIndex);
+  if (!occupied.length) { toast('지목할 참여자가 없어요'); return; }
+  occupied.forEach(i => {
+    const seat = state.seats[i];
+    const isRefused = !!seat.djRefuse;
+    const hasSong = !!seat.song;
+    const item = document.createElement('div');
+    item.className = 'dj-request-item' + (isRefused?' refused':'');
+    const colorData = COLORS.find(c=>c.id===seat.colorId)||COLORS[0];
+    item.innerHTML = `
+      <canvas class="sprite" width="36" height="36" data-char="${seat.charId}" data-color="${seat.colorId}" style="flex-shrink:0;image-rendering:pixelated;"></canvas>
+      <div style="flex:1;min-width:0;">
+        <div class="dj-request-name" style="color:${colorData.hex}">${seat.name}</div>
+        <div class="dj-request-song">${hasSong?'🎵 '+seat.song.title:'노래 미선정'}</div>
+      </div>
+      ${isRefused?'<span class="dj-request-badge refused">DJ 거부중</span>':(!hasSong?'<span class="dj-request-badge no-song">곡 미선정</span>':'')}
+    `;
+    requestAnimationFrame(()=>{
+      const cv = item.querySelector('canvas');
+      if (cv) drawSprite(cv, seat.charId, 2.25, seat.colorId);
+    });
+    if (!isRefused) {
+      item.addEventListener('click', () => {
+        doNextDJ(i);
+        document.getElementById('dj-request-modal').classList.remove('open');
+      });
+    }
+    list.appendChild(item);
+  });
+  document.getElementById('dj-request-modal').classList.add('open');
+}
+// 실제 DJ 넘기기
+function doNextDJ(targetIdx) {
+  fbUpdateDJ(targetIdx);
+  if (ytPlayer&&ytReady) { ytPlayer.stopVideo(); state.playing=false; state.currentSong=null; document.getElementById('player-bar').classList.add('hidden'); }
+  fbSendSystemChat(state.roomId, `🎧 이제 ${state.seats[targetIdx]?.name}님이 DJ입니다!`);
+  toast(`🎧 DJ: ${state.seats[targetIdx]?.name}`);
+}
 
 // ── ENTER ROOM
 async function enterRoom() {
@@ -1167,6 +1276,18 @@ async function enterRoom() {
     const newSeats = [null,null,null,null];
     Object.values(seats).forEach(s=>{if(s&&typeof s.seatIndex==='number')newSeats[s.seatIndex]=s;});
     state.seats = newSeats;
+    // 내 djRefuse 상태를 Firebase 값으로 동기화
+    if (state.me) {
+      const mySeat = newSeats[state.me.seatIndex];
+      if (mySeat) {
+        state.djRefuse = !!mySeat.djRefuse;
+        const btn = document.getElementById('dj-refuse-btn');
+        if (btn) {
+          btn.classList.toggle('active', state.djRefuse);
+          btn.textContent = state.djRefuse ? '✅ DJ 거부중' : '🚫 DJ 거부';
+        }
+      }
+    }
     renderSeats(); renderUsersBar(); updateDJIndicator();
   });
 
@@ -1253,10 +1374,14 @@ async function enterRoom() {
     const prevDJ = state.seats[data.djIndex];
     const amPrevDJ = prevDJ&&state.me&&prevDJ.name===state.me.name;
     if (!amPrevDJ) return;
+    // djRefuse 제외한 occupied 목록
     const occupied = state.seats.map((s,i)=>s?i:-1).filter(i=>i>=0);
+    const eligible = state.seats.map((s,i)=>s&&!s.djRefuse?i:-1).filter(i=>i>=0);
     if (!occupied.length) return;
-    const curPos = occupied.indexOf(data.djIndex);
-    const nextIdx = occupied[(curPos+1)%occupied.length];
+    // 거부 안 한 사람 중 다음 순서 찾기 (없으면 전체에서)
+    const pool = eligible.length ? eligible : occupied;
+    const curPos = pool.indexOf(data.djIndex);
+    const nextIdx = pool[(curPos+1)%pool.length];
     fbUpdateDJ(nextIdx);
     state._djRound = state._djRound||[];
     if (!state._djRound.includes(data.djIndex)) state._djRound.push(data.djIndex);
@@ -1752,14 +1877,34 @@ document.querySelectorAll('.reaction-btn').forEach(btn=>{
 
 // ── NEXT DJ
 document.getElementById('next-dj-btn').addEventListener('click',()=>{
-  const occupied=state.seats.map((s,i)=>s?i:-1).filter(i=>i>=0);
-  if(!occupied.length)return;
-  let next=(state.currentDJIndex+1)%4;
-  for(let i=0;i<4;i++){if(state.seats[next])break;next=(next+1)%4;}
-  fbUpdateDJ(next);
-  if(ytPlayer&&ytReady){ytPlayer.stopVideo();state.playing=false;state.currentSong=null;document.getElementById('player-bar').classList.add('hidden');}
-  fbSendSystemChat(state.roomId,`🎧 이제 ${state.seats[next]?.name}님이 DJ입니다!`);
-  toast(`🎧 DJ: ${state.seats[next]?.name}`);
+  const others = state.seats.map((s,i)=>s?i:-1).filter(i=>i>=0&&i!==state.currentDJIndex);
+  if (!others.length) return;
+  if (others.length === 1) {
+    // 혼자라면 바로 넘김
+    doNextDJ(others[0]);
+  } else {
+    // 여럿이면 지목 모달 열기
+    openDJRequestModal();
+  }
+});
+
+// ── DJ 신청 모달 닫기
+document.getElementById('dj-request-close').addEventListener('click',()=>{
+  document.getElementById('dj-request-modal').classList.remove('open');
+});
+document.getElementById('dj-request-modal').addEventListener('click', e=>{
+  if (e.target === document.getElementById('dj-request-modal'))
+    document.getElementById('dj-request-modal').classList.remove('open');
+});
+
+// ── DJ 거부권 토글
+document.getElementById('dj-refuse-btn').addEventListener('click',()=>{
+  state.djRefuse = !state.djRefuse;
+  const btn = document.getElementById('dj-refuse-btn');
+  btn.classList.toggle('active', state.djRefuse);
+  btn.textContent = state.djRefuse ? '✅ DJ 거부중' : '🚫 DJ 거부';
+  fbSetDJRefuse(state.djRefuse);
+  toast(state.djRefuse ? '🚫 DJ 거부 활성화 — 순번에서 제외됩니다' : '✅ DJ 거부 해제');
 });
 
 // ── LEAVE
