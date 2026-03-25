@@ -165,6 +165,13 @@
     background:var(--accent3);border:1px solid var(--purple);color:var(--purple);
     padding:5px 10px;font-family:var(--pixel);font-size:7px;cursor:pointer;
   }
+  .kick-btn {
+    position:absolute;top:6px;left:6px;
+    background:transparent;border:1px solid #ff4444;color:#ff4444;
+    padding:2px 6px;font-family:var(--pixel);font-size:6px;cursor:pointer;
+    opacity:0.7;transition:opacity 0.15s;z-index:5;
+  }
+  .kick-btn:hover { opacity:1; background:rgba(255,68,68,0.15); }
 
   /* CENTER KEYWORD */
   .center-keyword {
@@ -493,7 +500,7 @@ window.dispatchEvent(new Event('firebase-ready'));
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <!-- Shared (CHARS, COLORS, SPRITE_DATA, drawSprite) -->
-<script src="shared.js"></script>
+<script src="shared.js" onload="initRoom()"></script>
 
 <script>
 const ytApiKey = 'AIzaSyAW3tGSZ0CvhX1bakhF80YdeZCFkywMnJM';
@@ -592,6 +599,7 @@ function renderSeats() {
       const isMyTurn = isMe && isDJ;
       div.innerHTML = `
         ${isAway ? '<div class="away-badge">자리비움</div>' : ''}
+        ${!isMe && seat ? `<button class="kick-btn" data-kick="${seat.name}" data-seat="${i}">강퇴</button>` : ''}
         <div class="dj-crown">👑</div>
         <div class="seat-player-info">
           <canvas class="sprite" id="sprite-${i}" data-char="${seat.charId}" width="64" height="64"></canvas>
@@ -607,6 +615,28 @@ function renderSeats() {
       if (cv) drawSprite(cv, seat.charId, 4, seat.colorId);
     });
   }
+
+  // 강퇴 버튼 바인딩
+  container.querySelectorAll('.kick-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const targetName = btn.dataset.kick;
+      const targetSeat = parseInt(btn.dataset.seat);
+      if (!confirm(`${targetName}님을 강퇴할까요?`)) return;
+      kickPlayer(targetName, targetSeat);
+    });
+  });
+
+  // 강퇴 버튼 바인딩
+  container.querySelectorAll('.kick-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const targetName = btn.dataset.kick;
+      const targetSeat = parseInt(btn.dataset.seat);
+      if (!confirm(`${targetName}님을 강퇴할까요?`)) return;
+      kickPlayer(targetName, targetSeat);
+    });
+  });
 
   // 버튼 바인딩
   container.querySelectorAll('.pick-song-btn').forEach(btn=>{
@@ -711,6 +741,20 @@ function renderHistory() {
 }
 
 // ── FIREBASE HELPERS
+// ── 강퇴
+function kickPlayer(targetName, targetSeat) {
+  if (!state.roomId || !window._fbReady) return;
+  const {db, ref, set, push} = window._fb;
+  // 강퇴 신호 Firebase에 저장
+  set(ref(db, `rooms/${state.roomId}/kicked`), {
+    name: targetName, seatIndex: targetSeat, ts: Date.now(), by: state.me?.name
+  });
+  // 자리 제거
+  set(ref(db, `rooms/${state.roomId}/seats/seat_${targetSeat}`), null);
+  fbSendSystemChat(state.roomId, `🚫 ${targetName}님이 강퇴됐습니다.`);
+  toast(`🚫 ${targetName}님 강퇴`);
+}
+
 function fbSendSystemChat(roomId, text) {
   if (!window._fbReady) return;
   const {db,ref,push} = window._fb;
@@ -948,6 +992,29 @@ async function enterRoom() {
     lastResetTs = data.ts;
     renderSeats();
     toast('🎉 새 라운드! 노래를 선정해주세요');
+  });
+
+  // 강퇴 감지
+  onValue(ref(db, `rooms/${myRoomId}/kicked`), snap => {
+    if (!snap.exists()) return;
+    const data = snap.val();
+    if (!data || !state.me) return;
+    if (data.name === state.me.name) {
+      alert('강퇴됐습니다.');
+      localStorage.removeItem('musicroom_session');
+      location.href = 'index.html';
+    }
+  });
+
+  // 강퇴 감지
+  onValue(ref(db,`rooms/${myRoomId}/kicked`), snap=>{
+    if (!snap.exists()||!state.me) return;
+    const data = snap.val();
+    if (data && data.name===state.me.name) {
+      alert('강퇴됐습니다.');
+      localStorage.removeItem('musicroom_session');
+      location.href='index.html';
+    }
   });
 
   // 리액션
@@ -1255,8 +1322,13 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 // ── START
-window.addEventListener('firebase-ready',()=>{enterRoom();});
-if (window._fbReady) enterRoom();
+function initRoom() {
+  // shared.js 로드 완료 후 실행
+  window.addEventListener('firebase-ready', ()=>{enterRoom();});
+  if (window._fbReady) enterRoom();
+}
+// shared.js가 이미 로드된 경우 대비
+if (typeof CHARS !== 'undefined') initRoom();
 </script>
 </body>
 </html>
