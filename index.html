@@ -2376,11 +2376,14 @@ await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, colorId, se
   // 재생 중인 곡 — ts 기반으로 항상 트리거 (DJ 포함 모두)
   let lastPlayTs = 0;
   onValue(ref(db, `rooms/${roomId}/nowPlaying`), snap => {
+    toast('[NP] 신호수신: ' + snap.exists());
     if (!snap.exists()) return;
     const np = snap.val();
-    if (!np || !np.videoId) return;
+    if (!np || !np.videoId) { toast('[NP] videoId없음'); return; }
+    toast('[NP] ts:' + np.ts + ' last:' + lastPlayTs);
     if (np.ts <= lastPlayTs) return;
     lastPlayTs = np.ts;
+    toast('[NP] doPlay 호출, ytReady:' + ytReady + ' player:' + !!ytPlayer);
 
     state.currentSong = { id: np.videoId, title: np.title, thumb: np.thumb };
 
