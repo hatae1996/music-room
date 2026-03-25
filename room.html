@@ -592,8 +592,48 @@
     .player-bar { padding:8px 12px;min-height:60px; }
     .ctrl-btn { width:40px!important;height:40px!important;font-size:15px!important; }
     .ctrl-btn.play-btn { width:48px!important;height:48px!important;font-size:20px!important; }
-    .right-panel { border-left:none!important;border-top:2px solid var(--border); }
-    #panel-chat, #panel-playlist { height:300px!important;min-height:300px!important; }
+    .right-panel {
+      border-left:none!important;
+      border-top:2px solid var(--border);
+      display:flex!important;
+      flex-direction:column!important;
+      height:420px!important;
+      min-height:420px!important;
+      max-height:420px!important;
+      flex-shrink:0!important;
+      overflow:hidden!important;
+    }
+    .tab-bar { flex-shrink:0!important; }
+    .panel-section { flex-shrink:0!important; }
+    #panel-chat {
+      height:100%!important;
+      min-height:0!important;
+      max-height:none!important;
+      flex:1!important;
+      display:flex!important;
+      flex-direction:column!important;
+      overflow:hidden!important;
+    }
+    #panel-playlist {
+      height:100%!important;
+      min-height:0!important;
+      flex:1!important;
+      display:flex!important;
+      flex-direction:column!important;
+      overflow:hidden!important;
+    }
+    #panel-history {
+      flex:1!important;
+      overflow-y:auto!important;
+      min-height:0!important;
+    }
+    .chat-messages {
+      flex:1!important;
+      overflow-y:auto!important;
+      min-height:0!important;
+      -webkit-overflow-scrolling:touch;
+    }
+    .chat-input-area { flex-shrink:0!important; }
     .chat-input-area textarea, .chat-input-area .pixel-input { font-size:14px!important; }
     .topbar { padding:6px 10px; }
     .room-logo { font-size:8px!important; }
