@@ -3217,6 +3217,11 @@ document.getElementById('leave-btn').addEventListener('click', async () => {
   document.getElementById('room-screen').classList.remove('active');
   document.getElementById('setup-screen').classList.add('active');
   document.getElementById('player-bar').classList.add('hidden');
+
+  // 프로필 다시 불러오기 (저장된 캐릭터/색상 표시)
+  loadProfile();
+  renderCharPicker();
+  showLastRoomCard();
 });
 
 // ══════════════════════════════════════════
