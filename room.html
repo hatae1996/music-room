@@ -599,7 +599,6 @@ function renderSeats() {
       const isMyTurn = isMe && isDJ;
       div.innerHTML = `
         ${isAway ? '<div class="away-badge">자리비움</div>' : ''}
-        ${!isMe && seat ? `<button class="kick-btn" data-kick="${seat.name}" data-seat="${i}">강퇴</button>` : ''}
         <div class="dj-crown">👑</div>
         <div class="seat-player-info">
           <canvas class="sprite" id="sprite-${i}" data-char="${seat.charId}" width="64" height="64"></canvas>
@@ -607,6 +606,7 @@ function renderSeats() {
           <div class="seat-song${hasSong?' has-song':''}">${hasSong?'🎵 '+escHtml(seat.song.title):'노래 미선정'}</div>
           ${isMe?`<button class="pick-song-btn" data-seat="${i}">🔍 노래 선정</button>`:''}
           ${isMyTurn&&hasSong?`<button class="ctrl-btn play-btn" style="width:auto;padding:6px 14px;font-family:var(--pixel);font-size:8px;" id="my-play-btn">▶ 재생</button>`:''}
+          ${!isMe?`<button class="kick-btn" data-kick="${seat.name}" data-seat="${i}">강퇴</button>`:''}
         </div>`;
     }
     container.appendChild(div);
