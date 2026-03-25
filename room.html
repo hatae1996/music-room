@@ -1789,8 +1789,10 @@ function onPlayerStateChange(event) {
   if (event.data===YT.PlayerState.PLAYING) {
     state.playing=true; if(btn)btn.textContent='⏸';
     requestWakeLock();
+    startAudioKeepAlive(); // 백그라운드 유지 시작
   } else if (event.data===YT.PlayerState.PAUSED||event.data===YT.PlayerState.ENDED) {
     state.playing=false; if(btn)btn.textContent='▶';
+    stopAudioKeepAlive(); // 재생 안 할 땐 꺼두기
     if (event.data===YT.PlayerState.ENDED) {
       const djSeat = state.seats[state.currentDJIndex];
       const amDJ = djSeat&&state.me&&djSeat.name===state.me.name;
@@ -1810,24 +1812,82 @@ function handleUnmute() {
   document.getElementById('mute-btn').textContent='🔊';
   document.getElementById('mute-btn').style.color='';
   document.getElementById('unmute-bar').style.display='none';
+  // 첫 터치 시점에 AudioContext 초기화 (모바일 정책 대응)
+  startAudioKeepAlive();
 }
 
 // ── MEDIA SESSION
 function updateMediaSession(title, djName, thumb) {
   if (!('mediaSession' in navigator)) return;
-  navigator.mediaSession.metadata = new MediaMetadata({title, artist:`DJ: ${djName}`, artwork:thumb?[{src:thumb}]:[]});
-  navigator.mediaSession.setActionHandler('play',()=>{ytPlayer?.playVideo();});
-  navigator.mediaSession.setActionHandler('pause',()=>{ytPlayer?.pauseVideo();});
+  navigator.mediaSession.metadata = new MediaMetadata({title, artist:`DJ: ${djName}`, artwork:thumb?[{src:thumb,sizes:'480x360',type:'image/jpeg'}]:[]});
+  navigator.mediaSession.playbackState = 'playing';
+  navigator.mediaSession.setActionHandler('play', () => { ytPlayer?.playVideo(); navigator.mediaSession.playbackState='playing'; });
+  navigator.mediaSession.setActionHandler('pause', () => { ytPlayer?.pauseVideo(); navigator.mediaSession.playbackState='paused'; });
+  navigator.mediaSession.setActionHandler('stop', () => { ytPlayer?.stopVideo(); });
+  // previoustrack/nexttrack — 잠금화면 컨트롤 버튼 활성화용
+  navigator.mediaSession.setActionHandler('previoustrack', null);
+  navigator.mediaSession.setActionHandler('nexttrack', null);
 }
 
 // ── WAKE LOCK
+// ── WAKE LOCK
 let wakeLock = null;
 async function requestWakeLock() {
-  if (!('wakeLock' in navigator)||wakeLock) return;
-  try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{wakeLock=null;}); } catch(e){}
+  if (!('wakeLock' in navigator) || wakeLock) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch(e) {}
 }
-document.addEventListener('visibilitychange',()=>{
-  if (document.visibilityState==='visible'&&state.playing) requestWakeLock();
+
+// ── BACKGROUND AUDIO KEEP-ALIVE
+// 안드로이드 크롬이 백그라운드에서 JS/오디오를 중단하지 못하도록
+// 무음 AudioContext를 주기적으로 재생해서 "오디오 활성 탭"으로 유지
+let _audioCtx = null;
+let _keepAliveTimer = null;
+
+function startAudioKeepAlive() {
+  if (_keepAliveTimer) return;
+  try {
+    if (!_audioCtx) {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    _keepAliveTimer = setInterval(() => {
+      if (!state.playing) return;
+      try {
+        // 10ms 짜리 무음 버퍼 재생 — 브라우저에 "오디오 활성" 신호
+        const buf = _audioCtx.createBuffer(1, _audioCtx.sampleRate * 0.01, _audioCtx.sampleRate);
+        const src = _audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(_audioCtx.destination);
+        src.start();
+      } catch(e) {}
+    }, 20000); // 20초마다
+  } catch(e) {}
+}
+
+function stopAudioKeepAlive() {
+  if (_keepAliveTimer) { clearInterval(_keepAliveTimer); _keepAliveTimer = null; }
+}
+
+// visibilitychange: 복귀 시 재생 재시작 + wakeLock 재취득
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (state.playing) requestWakeLock();
+    // 백그라운드에서 복귀 시 ytPlayer가 pause됐을 수 있음 → 재생 재시도
+    if (state.playing && ytReady && ytPlayer) {
+      setTimeout(() => {
+        try {
+          if (ytPlayer.getPlayerState() !== 1) { // 1 = PLAYING
+            ytPlayer.playVideo();
+          }
+        } catch(e) {}
+      }, 500);
+    }
+    // AudioContext resume (모바일에서 백그라운드 후 suspended 될 수 있음)
+    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
+  }
 });
 
 // ── EMOJI
