@@ -1520,7 +1520,7 @@
 <body>
 
 <!-- API Key Popup -->
-<div id="apikey-popup">
+<div id="apikey-popup" style="display:none!important">
   <div class="popup-card">
     <div class="popup-title">🔑 YOUTUBE API KEY</div>
     <div class="popup-desc">
@@ -3361,9 +3361,11 @@ function showLastRoomCard() {
   } catch(e) {}
 }
 
+// 캐릭터 선택창은 즉시 렌더
+loadProfile();
+renderCharPicker();
+
 document.addEventListener('DOMContentLoaded', () => {
-  loadProfile();
-  renderCharPicker();
   showApiKeyPopupIfNeeded();
   tryRestoreSession().then(restored => {
     if (!restored) showLastRoomCard();
@@ -3372,9 +3374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── API Key Popup (PWA / 키 없을 때) ──
 function showApiKeyPopupIfNeeded() {
-  if (!ytApiKey) {
-    document.getElementById('apikey-popup').classList.add('open');
-  }
+  // API 키가 하드코딩돼있으므로 팝업 불필요
 }
 
 document.getElementById('popup-save-btn').addEventListener('click', () => {
