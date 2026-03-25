@@ -2432,20 +2432,34 @@ await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, colorId, se
 
     const doPlay = () => {
       if (ytReady && ytPlayer) {
-        if (amDJ || !isMuted) {
-          // DJ이거나 이전에 이미 음소거 해제한 경우 → 바로 재생
+        const alreadyUnmuted = localStorage.getItem('musicroom_unmuted') === 'true';
+
+        if (alreadyUnmuted) {
+          // 이미 해제한 적 있음 → 소리 있게 바로 재생
           ytPlayer.unMute();
           ytPlayer.setVolume(100);
+          isMuted = false;
+          document.getElementById('mute-btn').textContent = '🔊';
+          document.getElementById('mute-btn').style.color = '';
+          document.getElementById('unmute-bar').style.display = 'none';
           ytPlayer.loadVideoById(np.videoId);
         } else {
-          // 처음 듣는 사람 → 음소거 후 재생 + 배너
+          // 처음 → 음소거로 재생 후 배너 표시
           ytPlayer.mute();
-          document.getElementById('mute-btn').textContent = '🔇';
-          document.getElementById('mute-btn').style.color = 'var(--accent)';
+          isMuted = true;
           ytPlayer.loadVideoById(np.videoId);
-          showUnmuteBar();
+          // 재생 시작되면 배너 표시
+          const waitPlaying = setInterval(() => {
+            if (ytPlayer.getPlayerState() === 1 || ytPlayer.getPlayerState() === 3) {
+              clearInterval(waitPlaying);
+              document.getElementById('mute-btn').textContent = '🔇';
+              document.getElementById('mute-btn').style.color = 'var(--accent)';
+              showUnmuteBar();
+            }
+          }, 200);
         }
       } else {
+        // YT 준비 안됐으면 대기
         const waitPlay = setInterval(() => {
           if (ytReady && ytPlayer) { clearInterval(waitPlay); doPlay(); }
         }, 300);
