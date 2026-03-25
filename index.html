@@ -2373,21 +2373,18 @@ await set(ref(db, `rooms/${roomId}/seats/${myKey}`), { name, charId, colorId, se
     toast('🎉 새 라운드 시작! 노래를 선정해주세요');
   });
 
-  // 재생 중인 곡 — ts 기반으로 항상 트리거 (DJ 포함 모두)
+  // 재생 중인 곡 리스너
   let lastPlayTs = 0;
   onValue(ref(db, `rooms/${roomId}/nowPlaying`), snap => {
-    toast('[NP] 신호수신: ' + snap.exists());
     if (!snap.exists()) return;
     const np = snap.val();
-    if (!np || !np.videoId) { toast('[NP] videoId없음'); return; }
-    toast('[NP] ts:' + np.ts + ' last:' + lastPlayTs);
+    if (!np || !np.videoId) return;
     if (np.ts <= lastPlayTs) return;
     lastPlayTs = np.ts;
-    toast('[NP] doPlay 호출, ytReady:' + ytReady + ' player:' + !!ytPlayer);
 
     state.currentSong = { id: np.videoId, title: np.title, thumb: np.thumb };
 
-    // UI 업데이트 (모든 참여자)
+    // UI 업데이트
     document.getElementById('player-bar').classList.remove('hidden');
     document.getElementById('player-thumb').src = np.thumb || '';
     document.getElementById('player-title').textContent = np.title;
