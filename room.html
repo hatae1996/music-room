@@ -799,6 +799,13 @@ window.dispatchEvent(new Event('firebase-ready'));
 </script>
 
 <!-- YouTube IFrame API -->
+<script>
+// onYouTubeIframeAPIReady는 반드시 IFrame API 로드 전에 선언되어야 함
+window.onYouTubeIframeAPIReady = function() {
+  window._ytApiLoaded = true;
+  if (window._ytInit) window._ytInit();
+};
+</script>
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <!-- Shared (CHARS, COLORS, SPRITE_DATA, drawSprite) -->
@@ -1664,16 +1671,16 @@ function playCurrentDJSong() {
   if (!djSeat||!djSeat.song){toast('먼저 노래를 선정해주세요!');return;}
   // 플레이어 미준비 시 최대 5초 대기 후 재시도
   if (!ytReady||!ytPlayer||typeof ytPlayer.loadVideoById!=='function') {
-    toast('⏳ 플레이어 준비 중... 잠시 후 재생됩니다');
+    toast('⏳ 플레이어 준비 중...');
     let tries = 0;
     const wait = setInterval(()=>{
       tries++;
       if (ytReady && ytPlayer && typeof ytPlayer.loadVideoById==='function') {
         clearInterval(wait);
         _doPlay(djSeat.song, djSeat.name);
-      } else if (tries > 25) { // 5초 초과
+      } else if (tries > 75) { // 15초 대기
         clearInterval(wait);
-        toast('❌ 플레이어 로딩 실패. 새로고침 해보세요.');
+        toast('❌ YouTube 연결 실패. 인터넷 연결을 확인하거나 새로고침 해보세요.');
       }
     }, 200);
     return;
@@ -1690,16 +1697,20 @@ function _doPlay(song, djName) {
 }
 
 // ── YOUTUBE
-window.onYouTubeIframeAPIReady = function() {
-  ytPlayer = new YT.Player('yt-player',{
-    height:'180',width:'320',
-    playerVars:{autoplay:1,controls:0,rel:0,iv_load_policy:3,modestbranding:1,enablejsapi:1,origin:location.origin},
-    events:{
-      onReady: () => { ytReady = true; },  // 진짜 준비됐을 때만 true
-      onStateChange: onPlayerStateChange
+function _initYTPlayer() {
+  ytPlayer = new YT.Player('yt-player', {
+    height: '180', width: '320',
+    playerVars: {autoplay:1, controls:0, rel:0, iv_load_policy:3, modestbranding:1, enablejsapi:1, origin:location.origin},
+    events: {
+      onReady: () => { ytReady = true; },
+      onStateChange: onPlayerStateChange,
+      onError: (e) => { console.warn('YT Error:', e.data); }
     }
   });
-};
+}
+// API가 이미 로드됐으면 바로 초기화, 아니면 로드 완료 시 호출
+window._ytInit = _initYTPlayer;
+if (window._ytApiLoaded) _initYTPlayer();
 
 function onPlayerStateChange(event) {
   const btn = document.getElementById('play-pause-btn');
