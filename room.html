@@ -624,10 +624,10 @@
       border-top: 2px solid var(--border);
       display: flex!important;
       flex-direction: column!important;
-      /* 뷰포트 높이에서 위 영역 빼고 채움 */
-      height: 55vw!important;
-      min-height: 280px!important;
-      max-height: 400px!important;
+      /* 뷰포트 높이의 50% — 메시지 5개 이상 보임, 기기 크기 따라 자동 조절 */
+      height: 50dvh!important;
+      min-height: 360px!important;
+      max-height: none!important;
       flex-shrink: 0!important;
       overflow: hidden!important;
     }
