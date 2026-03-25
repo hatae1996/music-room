@@ -1400,20 +1400,39 @@
       min-height: 0 !important;
     }
     .seats-container {
-      height: 300px !important;
-      min-height: 300px !important;
+      height: 340px !important;
+      min-height: 340px !important;
       flex: none !important;
+      overflow: hidden !important;
     }
+    /* DJ 빔 모바일에서 잘리게 */
+    .seat.is-dj { overflow: hidden !important; }
     .seat { padding: 8px 6px; gap: 4px; }
     .dj-crown { font-size: 12px; }
     .seat-name { font-size: 7px !important; }
     .seat-song { font-size: 9px; max-width: 100px; }
     .pick-song-btn { font-size: 6px !important; padding: 3px 6px; }
     .center-keyword {
-      width: 120px;
+      width: 110px;
       top: 50% !important;
       left: 50% !important;
       transform: translate(-50%, -50%) !important;
+    }
+    .next-theme-card {
+      bottom: auto !important;
+      top: 6px !important;
+      right: 6px !important;
+      font-size: 0.85em;
+    }
+    .next-theme-badge {
+      padding: 4px 8px !important;
+    }
+    .next-theme-text {
+      font-size: 7px !important;
+    }
+    .next-theme-sub {
+      font-size: 5px !important;
+      display: none !important;
     }
     .keyword-text { font-size: 9px !important; }
     .keyword-label { font-size: 5px !important; }
@@ -1423,16 +1442,19 @@
 
     .player-bar {
       flex-shrink: 0;
-      padding: 6px 10px;
-      min-height: 52px;
-      gap: 8px;
+      padding: 8px 12px;
+      min-height: 60px;
+      gap: 10px;
+      z-index: 20;
+      position: relative;
     }
     .player-bar.hidden { display: none !important; }
-    .player-thumb { width: 36px; height: 36px; }
+    .player-thumb { width: 40px; height: 40px; }
     .player-title { font-size: 7px !important; }
     .player-dj { font-size: 10px; }
-    .ctrl-btn { width: 30px; height: 30px; font-size: 12px; }
-    .ctrl-btn.play-btn { width: 36px; height: 36px; font-size: 15px; }
+    .ctrl-btn { width: 36px; height: 36px; font-size: 14px; }
+    .ctrl-btn.play-btn { width: 44px; height: 44px; font-size: 18px; }
+    .player-controls { gap: 8px; }
 
     /* 리액션 바: 가로 스크롤로 한 줄 */
     .reaction-bar {
