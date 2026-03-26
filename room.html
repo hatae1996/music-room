@@ -164,12 +164,135 @@
   }
   @keyframes glow { 0%,100%{box-shadow:0 0 12px rgba(233,69,96,0.3)}50%{box-shadow:0 0 20px rgba(233,69,96,0.6)} }
 
-  /* SEATS */
-  .seats-container {
-    flex: 1; display: grid;
-    grid-template-columns: 1fr 1fr;
+  /* ROOM STAGE — 5칸 (좌석 4 + 중앙 DJ 부스) */
+  .room-stage {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr 1fr;
     grid-template-rows: 1fr 1fr;
-    position: relative; overflow: hidden; min-height: 0;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    padding: 8px;
+  }
+  .seat[data-seat="0"] { grid-column: 1; grid-row: 1; }
+  .seat[data-seat="1"] { grid-column: 3; grid-row: 1; }
+  .seat[data-seat="2"] { grid-column: 1; grid-row: 2; }
+  .seat[data-seat="3"] { grid-column: 3; grid-row: 2; }
+
+  .dj-room {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: linear-gradient(180deg, var(--surface2) 0%, var(--surface) 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 12px;
+    gap: 8px;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.3s, border-color 0.3s;
+  }
+  .dj-room.dj-booth-glow {
+    animation: djBoothGlow 0.85s ease-out;
+  }
+  @keyframes djBoothGlow {
+    0% { box-shadow: 0 0 0 rgba(245,166,35,0); border-color: var(--border); }
+    35% { box-shadow: 0 0 28px rgba(245,166,35,0.55); border-color: var(--accent2); }
+    100% { box-shadow: 0 0 0 rgba(245,166,35,0); border-color: var(--border); }
+  }
+
+  .dj-room-empty, .dj-room-active {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+  }
+  .dj-room-title {
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+  }
+  .dj-room-hint {
+    font-family: var(--pixel);
+    font-size: 7px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 2;
+  }
+  #dj-char-canvas {
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+  .dj-nick {
+    font-family: var(--pixel);
+    font-size: 8px;
+    color: var(--accent);
+    text-align: center;
+  }
+  .dj-controls {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    width: 100%;
+  }
+  .dj-controls button {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-family: var(--pixel);
+    font-size: 6px;
+    cursor: pointer;
+  }
+  .dj-controls button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .now-playing {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    margin-top: auto;
+  }
+  .now-playing #song-thumb {
+    width: 56px; height: 40px; object-fit: cover;
+    border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .song-info { flex: 1; min-width: 0; }
+  #song-title {
+    font-family: var(--pixel);
+    font-size: 7px;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  #song-channel { font-size: 10px; color: var(--text-dim); }
+  .dj-queue-row {
+    width: 100%;
+    font-family: var(--pixel);
+    font-size: 5px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.7;
+    padding: 6px 8px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
   }
 
   .seat {
@@ -178,24 +301,54 @@
     align-items: center; justify-content: center;
     padding: 16px 12px; gap: 8px; position: relative;
     transition: background 0.3s;
+    background: var(--bg);
   }
-  .seat:nth-child(1){border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
-  .seat:nth-child(2){border-left:1px solid var(--border);border-bottom:1px solid var(--border);}
-  .seat:nth-child(3){border-right:1px solid var(--border);border-top:1px solid var(--border);}
-  .seat:nth-child(4){border-left:1px solid var(--border);border-top:1px solid var(--border);}
+  .seat.is-dj-home canvas.sprite {
+    opacity: 0.38;
+    filter: grayscale(35%);
+  }
+  .dj-home-badge {
+    font-family: var(--pixel);
+    font-size: 6px;
+    color: var(--accent2);
+    margin-top: 2px;
+    letter-spacing: 1px;
+  }
+  .seat.dj-seat-enter-anim .seat-player-info {
+    animation: djSeatToBooth 0.5s ease forwards;
+  }
+  @keyframes djSeatToBooth {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    40% { opacity: 0.2; transform: translate(var(--dj-slide-x, 0), var(--dj-slide-y, -12px)) scale(0.85); }
+    100% { opacity: 1; transform: translate(0, 0) scale(1); }
+  }
+  .seat.dj-seat-return-anim .seat-player-info {
+    animation: djSeatFromBooth 0.5s ease forwards;
+  }
+  @keyframes djSeatFromBooth {
+    0% { opacity: 0.35; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+  }
 
-  .seat.is-dj { position: relative; overflow: hidden; }
-  .seat.is-dj::before {
-    content: ''; position: absolute; top: 0; left: 50%;
-    transform: translateX(-50%); width: 160px; height: 100%;
-    background: linear-gradient(to bottom, rgba(245,200,80,0.22) 0%, rgba(245,200,80,0.06) 50%, transparent 100%);
-    clip-path: polygon(40% 0%, 60% 0%, 85% 100%, 15% 100%);
-    pointer-events: none; z-index: 0;
-    animation: beamPulse 2.5s ease-in-out infinite;
+  .dj-apply-btn {
+    margin-top: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 5px 10px;
+    font-family: var(--pixel);
+    font-size: 6px;
+    cursor: pointer;
+    white-space: nowrap;
   }
-  @keyframes beamPulse { 0%,100%{opacity:0.8}50%{opacity:1} }
-  .seat.is-dj canvas.sprite {
-    filter: drop-shadow(0 0 6px rgba(245,166,35,0.8)) drop-shadow(0 0 16px rgba(245,166,35,0.4));
+  .dj-apply-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .dj-wait-label {
+    font-family: var(--pixel);
+    font-size: 6px;
+    color: var(--accent2);
+    margin-top: 6px;
+    text-align: center;
+    line-height: 1.5;
   }
   .seat.is-me { background: rgba(0,255,136,0.04); }
   .seat.empty { opacity: 0.4; }
@@ -210,12 +363,9 @@
   }
 
   .seat-player-info { display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1; }
-  .dj-crown { font-size:16px; display:none; animation: bob 1s ease-in-out infinite; }
-  .is-dj .dj-crown { display:block; }
-  @keyframes bob { 0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)} }
   .seat-name { font-family:var(--pixel);font-size:8px;color:var(--text);text-align:center; }
   .seat.is-me .seat-name { color: var(--green); }
-  .seat.is-dj .seat-name { color: var(--accent); }
+  .seat.is-dj-home .seat-name { color: var(--accent2); }
   .seat-song { font-size:11px;color:var(--text-dim);text-align:center;max-width:130px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical; }
   .seat-song.has-song { color: var(--accent2); }
   .pick-song-btn {
@@ -579,6 +729,7 @@
   @keyframes animCry { 0%,100%{transform:translateY(0)}50%{transform:translateY(5px)scale(0.92)} }
   @keyframes animSpin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
   .seat.is-bobbing canvas.sprite, canvas.sprite.anim-dance { animation:animDance 0.45s ease-in-out infinite; }
+  .dj-room.is-bobbing #dj-char-canvas { animation:animDance 0.45s ease-in-out infinite; }
   canvas.sprite.anim-jump { animation:animJump 0.5s ease-out; }
   canvas.sprite.anim-shake { animation:animShake 0.5s ease-in-out; }
   canvas.sprite.anim-celebrate { animation:animCelebrate 0.6s ease-in-out; }
@@ -592,8 +743,24 @@
     .room-layout { display:flex!important; flex-direction:column!important; height:auto!important; }
     .stage-area { flex-shrink:0!important; height:auto!important; }
 
-    /* 자리 */
-    .seats-container { height:320px!important; min-height:320px!important; flex:none!important; overflow:hidden!important; }
+    /* 스테이지 (DJ 상단 + 좌석 2×2) */
+    .room-stage {
+      grid-template-columns: 1fr 1fr !important;
+      grid-template-rows: auto auto auto !important;
+      height: auto !important;
+      min-height: 420px !important;
+      flex: none !important;
+      overflow: visible !important;
+    }
+    .dj-room {
+      grid-column: 1 / span 2 !important;
+      grid-row: 1 !important;
+      min-height: 200px !important;
+    }
+    .seat[data-seat="0"] { grid-column: 1 !important; grid-row: 2 !important; }
+    .seat[data-seat="1"] { grid-column: 2 !important; grid-row: 2 !important; }
+    .seat[data-seat="2"] { grid-column: 1 !important; grid-row: 3 !important; }
+    .seat[data-seat="3"] { grid-column: 2 !important; grid-row: 3 !important; }
     .seat { padding:6px 4px!important; gap:3px!important; }
     .seat canvas.sprite { transform:scale(0.7); transform-origin:top center; }
     .center-keyword { width:110px; }
@@ -711,7 +878,32 @@
       <div class="dj-indicator" id="dj-indicator">🎧 DJ: ---</div>
 
       <!-- Sprint 5: 미니게임 키워드 UI 복원 예정 (#theme-section) -->
-      <div class="seats-container" id="seats-container">
+      <div class="room-stage" id="room-stage">
+        <div class="dj-room" id="dj-room">
+          <div class="dj-room-empty" id="dj-room-empty">
+            <div class="dj-room-title">DJ BOOTH</div>
+            <div class="dj-room-hint">DJ를 기다리는 중...</div>
+          </div>
+          <div class="dj-room-active" id="dj-room-active" style="display:none">
+            <div class="dj-room-title">DJ BOOTH</div>
+            <canvas class="sprite" id="dj-char-canvas" width="64" height="64"></canvas>
+            <div class="dj-nick" id="dj-nick"></div>
+            <div class="dj-controls" id="dj-controls">
+              <button type="button" id="dj-search-btn">🔍 검색</button>
+              <button type="button" id="dj-playlist-btn">📂 플레이리스트</button>
+              <button type="button" id="dj-play-pause-btn">▶</button>
+              <button type="button" id="dj-leave-btn">DJ 그만두기</button>
+            </div>
+            <div class="now-playing" id="dj-now-playing">
+              <img id="song-thumb" src="" alt="">
+              <div class="song-info">
+                <div id="song-title">-</div>
+                <div id="song-channel">-</div>
+              </div>
+            </div>
+          </div>
+          <div class="dj-queue-row" id="dj-queue-display"></div>
+        </div>
         <!--
         <div class="center-keyword" id="center-keyword">...</div>
         <div class="next-theme-card" id="next-theme-card">...</div>
@@ -1135,8 +1327,16 @@ function generateRoomId() {
 
 // ── EMOJI ANIMATIONS
 const EMOJI_ANIM = {'👍':'jump','❤️':'shake','🔥':'dance','⭐':'spin','❄️':'shake','💧':'cry','🎉':'celebrate','😂':'jump','🎵':'dance'};
+function seatIndexOfDJ() {
+  const name = state.dj && state.dj.currentDJ;
+  if (!name) return -1;
+  return state.seats.findIndex(s => s && s.name === name);
+}
 function playCharAnim(seatIdx, animClass, ms=700) {
-  const cv = document.getElementById(`sprite-${seatIdx}`);
+  const djIdx = seatIndexOfDJ();
+  const cv = (seatIdx >= 0 && seatIdx === djIdx)
+    ? document.getElementById('dj-char-canvas')
+    : document.getElementById(`sprite-${seatIdx}`);
   if (!cv) return;
   ['anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin'].forEach(c=>cv.classList.remove(c));
   void cv.offsetWidth;
@@ -1144,27 +1344,117 @@ function playCharAnim(seatIdx, animClass, ms=700) {
   if (animClass !== 'anim-dance') setTimeout(()=>cv.classList.remove(animClass), ms);
 }
 function stopCharAnim(seatIdx) {
-  const cv = document.getElementById(`sprite-${seatIdx}`);
-  if (cv) ['anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin'].forEach(c=>cv.classList.remove(c));
+  const djIdx = seatIndexOfDJ();
+  const ids = [document.getElementById(`sprite-${seatIdx}`)];
+  if (seatIdx === djIdx) ids.push(document.getElementById('dj-char-canvas'));
+  ids.forEach(cv => {
+    if (cv) ['anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin'].forEach(c=>cv.classList.remove(c));
+  });
 }
 
 function isMeDJ() {
   return !!(state.me && state.dj && state.dj.currentDJ === state.me.name);
 }
 
+function setSeatSlideVars(seatEl, seatIndex) {
+  const booth = document.getElementById('dj-room');
+  if (!seatEl || !booth) return;
+  const sr = seatEl.getBoundingClientRect();
+  const br = booth.getBoundingClientRect();
+  const dx = (br.left + br.width / 2) - (sr.left + sr.width / 2);
+  const dy = (br.top + br.height / 2) - (sr.top + sr.height / 2);
+  const scale = Math.min(120 / Math.hypot(dx, dy || 1), 1);
+  seatEl.style.setProperty('--dj-slide-x', `${(dx * scale * 0.35).toFixed(0)}px`);
+  seatEl.style.setProperty('--dj-slide-y', `${(dy * scale * 0.35).toFixed(0)}px`);
+}
+
+function maybeDjTransition(before, after) {
+  const prev = before && before.currentDJ;
+  const cur = after && after.currentDJ;
+  const booth = document.getElementById('dj-room');
+
+  if (cur && cur !== prev) {
+    const idx = state.seats.findIndex(s => s && s.name === cur);
+    if (idx >= 0) {
+      const el = document.querySelector(`.seat[data-seat="${idx}"]`);
+      if (el) {
+        setSeatSlideVars(el, idx);
+        el.classList.remove('dj-seat-return-anim');
+        el.classList.add('dj-seat-enter-anim');
+        setTimeout(() => el.classList.remove('dj-seat-enter-anim'), 520);
+      }
+    }
+    booth?.classList.add('dj-booth-glow');
+    setTimeout(() => booth?.classList.remove('dj-booth-glow'), 900);
+  }
+
+  if (prev && prev !== cur) {
+    const idx = state.seats.findIndex(s => s && s.name === prev);
+    if (idx >= 0) {
+      const el = document.querySelector(`.seat[data-seat="${idx}"]`);
+      el?.classList.remove('dj-seat-enter-anim');
+      el?.classList.add('dj-seat-return-anim');
+      setTimeout(() => el?.classList.remove('dj-seat-return-anim'), 520);
+    }
+  }
+}
+
+function renderDJRoom() {
+  const emptyEl = document.getElementById('dj-room-empty');
+  const activeEl = document.getElementById('dj-room-active');
+  const djName = state.dj && state.dj.currentDJ;
+  const djSeat = djName ? state.seats.find(s => s && s.name === djName) : null;
+  const qRow = document.getElementById('dj-queue-display');
+  const q = (state.dj && Array.isArray(state.dj.djQueue)) ? state.dj.djQueue : [];
+  const qlabels = q.map(n => { const p = state.seats.find(s => s && s.name === n); return p ? p.name : n; });
+  if (qRow) qRow.textContent = qlabels.length ? `다음 DJ: ${qlabels.join(' → ')}` : '';
+
+  if (!djName || !djSeat) {
+    if (emptyEl) emptyEl.style.display = 'flex';
+    if (activeEl) activeEl.style.display = 'none';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (activeEl) activeEl.style.display = 'flex';
+  const nick = document.getElementById('dj-nick');
+  if (nick) nick.textContent = djSeat.name;
+  const cv = document.getElementById('dj-char-canvas');
+  if (cv) requestAnimationFrame(() => drawSprite(cv, djSeat.charId, 4, djSeat.colorId));
+  const ctrl = document.getElementById('dj-controls');
+  if (ctrl) ctrl.style.display = isMeDJ() ? 'flex' : 'none';
+
+  const cs = state.remoteCurrentSong;
+  const thumbEl = document.getElementById('song-thumb');
+  const titleEl = document.getElementById('song-title');
+  const chEl = document.getElementById('song-channel');
+  if (cs && cs.id) {
+    if (thumbEl) { thumbEl.src = cs.thumbnail || cs.thumb || ''; thumbEl.style.display = ''; }
+    if (titleEl) titleEl.textContent = cs.title || '-';
+    if (chEl) chEl.textContent = cs.channel || '-';
+  } else {
+    if (thumbEl) { thumbEl.src = ''; thumbEl.style.display = 'none'; }
+    if (titleEl) titleEl.textContent = '-';
+    if (chEl) chEl.textContent = '-';
+  }
+
+  const pp = document.getElementById('dj-play-pause-btn');
+  if (pp) pp.textContent = state.playing ? '⏸' : '▶';
+}
+
 // ── RENDER SEATS
 function renderSeats() {
-  const container = document.getElementById('seats-container');
-  container.innerHTML = '';
+  const stage = document.getElementById('room-stage');
+  if (!stage) return;
+  stage.querySelectorAll('.seat').forEach(el => el.remove());
 
   for (let i = 0; i < 4; i++) {
     const seat = state.seats[i];
     const isMe = seat && state.me && seat.name === state.me.name;
-    const isDJ = !!(seat && state.dj && state.dj.currentDJ && seat.name === state.dj.currentDJ);
+    const isDJHome = !!(seat && state.dj && state.dj.currentDJ && seat.name === state.dj.currentDJ);
     const isEmpty = !seat;
     const div = document.createElement('div');
     const isAway = seat && seat.away && !isMe;
-    div.className = `seat${isDJ?' is-dj':''}${isMe?' is-me':''}${isEmpty?' empty':''}${isAway?' is-away':''}`;
+    div.className = `seat${isDJHome?' is-dj-home':''}${isMe?' is-me':''}${isEmpty?' empty':''}${isAway?' is-away':''}`;
     div.dataset.seat = i;
 
     if (isEmpty) {
@@ -1172,28 +1462,34 @@ function renderSeats() {
       div.innerHTML = `<div style="font-family:var(--pixel);font-size:7px;color:var(--text-dim);text-align:center;line-height:2.5;"><div style="font-size:22px;margin-bottom:8px;opacity:0.3">👤</div>WAITING...<br>${pos}</div>`;
     } else {
       const hasSong = seat.song != null;
-      const isMyTurn = isMe && isDJ;
+      const q = (state.dj && state.dj.djQueue) || [];
+      const qpos = q.indexOf(seat.name);
+      const inQueue = qpos >= 0;
+      let djExtra = '';
+      if (isMe && !isMeDJ()) {
+        if (inQueue) djExtra = `<div class="dj-wait-label">⏳ 대기 중 (#${qpos + 1}위)</div>`;
+        else djExtra = `<button type="button" class="dj-apply-btn" data-dj-apply="1">🎧 DJ 신청</button>`;
+      }
       div.innerHTML = `
         ${isAway ? '<div class="away-badge">자리비움</div>' : ''}
-        <div class="dj-crown">👑</div>
         <div class="seat-player-info">
           <canvas class="sprite" id="sprite-${i}" data-char="${seat.charId}" width="64" height="64"></canvas>
+          ${isDJHome ? '<div class="dj-home-badge">🎧 DJ 중</div>' : ''}
           <div class="seat-name">${escHtml(seat.name)}${isMe?' 〈나〉':''}</div>
           <div class="seat-song${hasSong?' has-song':''}">${hasSong?'🎵 '+escHtml(seat.song.title):'노래 미선정'}</div>
           ${isMe?`<button class="pick-song-btn" data-seat="${i}">🔍 노래 선정</button>`:''}
-          ${isMyTurn&&hasSong?`<button class="ctrl-btn play-btn" style="width:auto;padding:6px 14px;font-family:var(--pixel);font-size:8px;" id="my-play-btn">▶ 재생</button>`:''}
+          ${djExtra}
           ${!isMe?`<button class="kick-btn" data-kick="${seat.name}" data-seat="${i}">강퇴</button>`:''}
         </div>`;
     }
-    container.appendChild(div);
+    stage.appendChild(div);
     if (seat) requestAnimationFrame(()=>{
       const cv = document.getElementById(`sprite-${i}`);
       if (cv) drawSprite(cv, seat.charId, 4, seat.colorId);
     });
   }
 
-  // 강퇴 버튼 바인딩
-  container.querySelectorAll('.kick-btn').forEach(btn=>{
+  stage.querySelectorAll('.kick-btn').forEach(btn=>{
     btn.addEventListener('click', e=>{
       e.stopPropagation();
       const targetName = btn.dataset.kick;
@@ -1203,12 +1499,14 @@ function renderSeats() {
     });
   });
 
-  // 버튼 바인딩
-  container.querySelectorAll('.pick-song-btn').forEach(btn=>{
+  stage.querySelectorAll('.pick-song-btn').forEach(btn=>{
     btn.addEventListener('click', e=>{e.stopPropagation();openSearchModal();});
   });
-  const myPlayBtn = document.getElementById('my-play-btn');
-  if (myPlayBtn) myPlayBtn.addEventListener('click', e=>{e.stopPropagation();playCurrentDJSong();});
+  stage.querySelectorAll('.dj-apply-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{e.stopPropagation();applyDJRole();});
+  });
+
+  renderDJRoom();
 }
 
 function renderUsersBar() {
@@ -1253,15 +1551,24 @@ function renderHistory() {
 
 // ── FIREBASE HELPERS
 // ── 강퇴
-function kickPlayer(targetName, targetSeat) {
+async function kickPlayer(targetName, targetSeat) {
   if (!state.roomId || !window._fbReady) return;
-  const {db, ref, set, push} = window._fb;
-  // 강퇴 신호 Firebase에 저장
+  const {db, ref, set, push, get, update} = window._fb;
   set(ref(db, `rooms/${state.roomId}/kicked`), {
     name: targetName, seatIndex: targetSeat, ts: Date.now(), by: state.me?.name
   });
-  // 자리 제거
-  set(ref(db, `rooms/${state.roomId}/seats/seat_${targetSeat}`), null);
+  await set(ref(db, `rooms/${state.roomId}/seats/seat_${targetSeat}`), null);
+  if (state.dj && (state.dj.currentDJ === targetName || (state.dj.djQueue || []).includes(targetName))) {
+    const djSnap = await get(ref(db, `rooms/${state.roomId}/dj`));
+    const d = djSnap.val() || { djQueue: [] };
+    let queue = (Array.isArray(d.djQueue) ? d.djQueue : []).filter(n => n !== targetName);
+    let cur = d.currentDJ ?? null;
+    if (cur === targetName) {
+      cur = queue[0] || null;
+      queue = queue.slice(1);
+    }
+    await update(ref(db, `rooms/${state.roomId}/dj`), { currentDJ: cur, djQueue: queue });
+  }
   fbSendSystemChat(state.roomId, `🚫 ${targetName}님이 강퇴됐습니다.`);
   toast(`🚫 ${targetName}님 강퇴`);
 }
@@ -1283,6 +1590,43 @@ function fbUpdateSong(seatIndex, song) {
   if (!state.roomId||!window._fbReady) return;
   const {db,ref,update} = window._fb;
   update(ref(db,`rooms/${state.roomId}/seats/seat_${seatIndex}`),{song:song||null});
+}
+
+async function applyDJRole() {
+  if (!state.me || !state.roomId || !window._fbReady) return;
+  const { db, ref, get, update } = window._fb;
+  const djRef = ref(db, `rooms/${state.roomId}/dj`);
+  const snap = await get(djRef);
+  const d = snap.val() || { currentDJ: null, djQueue: [] };
+  let q = Array.isArray(d.djQueue) ? [...d.djQueue] : [];
+  const cur = d.currentDJ ?? null;
+  if (!cur) {
+    await update(djRef, { currentDJ: state.me.name, djQueue: q });
+    toast('🎧 DJ 부스에 입장했습니다!');
+    return;
+  }
+  if (cur === state.me.name) return;
+  if (q.includes(state.me.name)) {
+    toast('이미 DJ 대기열에 있어요');
+    return;
+  }
+  q.push(state.me.name);
+  await update(djRef, { currentDJ: cur, djQueue: q });
+  toast('DJ 대기열에 등록됐어요');
+}
+
+async function leaveDJBooth() {
+  if (!isMeDJ() || !state.roomId || !window._fbReady) return;
+  if (!confirm('DJ를 그만둘까요? 다음 대기자가 부스로 올라옵니다.')) return;
+  const { db, ref, get, update } = window._fb;
+  const djRef = ref(db, `rooms/${state.roomId}/dj`);
+  const snap = await get(djRef);
+  const d = snap.val() || {};
+  const queue = Array.isArray(d.djQueue) ? [...d.djQueue] : [];
+  const nextDJ = queue.length > 0 ? queue[0] : null;
+  const newQueue = queue.slice(1);
+  await update(djRef, { currentDJ: nextDJ, djQueue: newQueue });
+  toast('DJ를 그만뒀어요');
 }
 async function getServerTimeMs() {
   if (!window._fbReady) return Date.now();
@@ -1364,6 +1708,7 @@ function applyCurrentSongFromFirebase(cs) {
   document.getElementById('player-title').textContent = cs.title || '';
   document.getElementById('player-dj-name').textContent = `🎧 DJ: ${cs.djName || ''}`;
   updateMediaSession(cs.title, cs.djName, cs.thumbnail);
+  renderDJRoom();
 
   const applyMutedAutoplay = () => {
     const alreadyUnmuted = localStorage.getItem('musicroom_unmuted') === 'true';
@@ -1494,14 +1839,7 @@ async function enterRoom() {
     });
   }
 
-  const djSnap = await get(ref(db, `rooms/${myRoomId}/dj`));
-  const djV = djSnap.val() || {};
-  if (!djV.currentDJ) {
-    await update(ref(db, `rooms/${myRoomId}/dj`), {
-      currentDJ: myName,
-      djQueue: Array.isArray(djV.djQueue) ? djV.djQueue : [],
-    });
-  }
+  // DJ는 DJ 신청(또는 대기열 승격)으로만 부스에 입장 (첫 입장 자동 DJ 제거)
 
   // 세션 저장
   localStorage.setItem('musicroom_session', JSON.stringify({
@@ -1520,12 +1858,21 @@ async function enterRoom() {
     if (!snap.exists()) return;
     const data = snap.val();
     if (data.dj) {
-      const q = Array.isArray(data.dj.djQueue) ? data.dj.djQueue : [];
-      const nextDj = { currentDJ: data.dj.currentDJ ?? null, djQueue: q };
+      let q = Array.isArray(data.dj.djQueue) ? [...data.dj.djQueue] : [];
+      let cur = data.dj.currentDJ ?? null;
+      if (!cur && q.length > 0) {
+        cur = q[0];
+        q = q.slice(1);
+        update(ref(db, `rooms/${myRoomId}/dj`), { currentDJ: cur, djQueue: q });
+        return;
+      }
+      const nextDj = { currentDJ: cur, djQueue: q };
       if (JSON.stringify(nextDj) !== JSON.stringify(state.dj)) {
+        const before = { ...state.dj };
         state.dj = nextDj;
         renderSeats();
         updateDJIndicator();
+        requestAnimationFrame(() => maybeDjTransition(before, state.dj));
       }
     }
   });
@@ -1575,6 +1922,7 @@ async function enterRoom() {
     if (!snap.exists()) {
       state.remoteCurrentSong = null;
       applyCurrentSongFromFirebase._lastSig = '';
+      renderDJRoom();
       return;
     }
     const cs = snap.val();
@@ -1623,14 +1971,22 @@ async function enterRoom() {
   // 리듬
   onValue(ref(db,`rooms/${myRoomId}/rhythm`), snap=>{
     const rhythmData = snap.val()||{};
+    const djIdx = seatIndexOfDJ();
     state.seats.forEach((seat,idx)=>{
       if (!seat) return;
       const key = seat.name.replace(/[.#$[\]]/g,'_');
       const r = rhythmData[key];
+      const djBooth = document.getElementById('dj-room');
       if (r&&r.on) {
-        document.querySelector(`.seat[data-seat="${idx}"]`)?.classList.add('is-bobbing');
-        playCharAnim(idx,'anim-dance');
+        if (idx === djIdx && djBooth) {
+          djBooth.classList.add('is-bobbing');
+          playCharAnim(idx,'anim-dance');
+        } else {
+          document.querySelector(`.seat[data-seat="${idx}"]`)?.classList.add('is-bobbing');
+          playCharAnim(idx,'anim-dance');
+        }
       } else {
+        if (idx === djIdx && djBooth) djBooth.classList.remove('is-bobbing');
         document.querySelector(`.seat[data-seat="${idx}"]`)?.classList.remove('is-bobbing');
         stopCharAnim(idx);
       }
@@ -1694,6 +2050,7 @@ function onPlayerStateChange(event) {
   if (event.data===YT.PlayerState.PLAYING) {
     clearTimeout(_pauseFbTimer);
     state.playing=true; if(btn)btn.textContent='⏸';
+    renderDJRoom();
     requestWakeLock();
     startAudioKeepAlive();
     if (isMeDJ() && state.remoteCurrentSong && state.remoteCurrentSong.pausePositionSec != null && state.remoteCurrentSong.pausePositionSec >= 0) {
@@ -1701,6 +2058,7 @@ function onPlayerStateChange(event) {
     }
   } else if (event.data===YT.PlayerState.PAUSED) {
     state.playing=false; if(btn)btn.textContent='▶';
+    renderDJRoom();
     stopAudioKeepAlive();
     if (isMeDJ() && state.remoteCurrentSong && state.remoteCurrentSong.id) {
       clearTimeout(_pauseFbTimer);
@@ -1712,6 +2070,7 @@ function onPlayerStateChange(event) {
   } else if (event.data===YT.PlayerState.ENDED) {
     clearTimeout(_pauseFbTimer);
     state.playing=false; if(btn)btn.textContent='▶';
+    renderDJRoom();
     stopAudioKeepAlive();
   }
 }
@@ -2085,6 +2444,14 @@ document.getElementById('play-pause-btn').addEventListener('click',()=>{
   else if (state.currentSong) ytPlayer.playVideo();
   else playCurrentDJSong();
 });
+const djSearchBtn = document.getElementById('dj-search-btn');
+const djPlBtn = document.getElementById('dj-playlist-btn');
+const djPpBtn = document.getElementById('dj-play-pause-btn');
+const djLeaveBtn = document.getElementById('dj-leave-btn');
+if (djSearchBtn) djSearchBtn.addEventListener('click', () => openSearchModal());
+if (djPlBtn) djPlBtn.addEventListener('click', () => toast('플레이리스트는 Sprint 3에서 연결됩니다 📂'));
+if (djPpBtn) djPpBtn.addEventListener('click', () => document.getElementById('play-pause-btn').click());
+if (djLeaveBtn) djLeaveBtn.addEventListener('click', () => leaveDJBooth());
 document.getElementById('stop-btn').addEventListener('click',()=>{
   if (!ytPlayer||!ytReady) return;
   if (!isMeDJ()) { toast('DJ만 조작할 수 있어요'); return; }
@@ -2096,6 +2463,7 @@ document.getElementById('stop-btn').addEventListener('click',()=>{
     const {db, ref, set} = window._fb;
     set(ref(db, `rooms/${state.roomId}/currentSong`), null);
   }
+  renderDJRoom();
   fbSendSystemChat(state.roomId,'재생이 멈췄습니다.');
 });
 document.getElementById('mute-btn').addEventListener('click',()=>{
