@@ -64,10 +64,9 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 백그라운드 오디오 유지를 위해 SW가 살아있도록 주기적 ping 수신
+// 백그라운드 오디오 유지: 클라이언트가 15초마다 ping → SW 활성 유지
 self.addEventListener('message', (event) => {
   if (event.data === 'keepalive') {
-    // 응답만 해도 SW가 활성 상태 유지됨
     event.ports[0]?.postMessage('alive');
   }
 });

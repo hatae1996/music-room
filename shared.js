@@ -181,6 +181,27 @@ const SPRITE_DATA = {
   ],
 };
 
+// ── Sprint 4: 좌석 캐릭터 아이들 모션 (room.html과 동기화)
+const IDLE_MOTIONS = {
+  bob:        { frames: 4, offsetY: [0, -1, -2, -1], speed: 300 },
+  nod:        { frames: 3, offsetY: [0, -2, 0], speed: 250 },
+  tap:        { frames: 2, scaleY: [1.0, 0.95], speed: 200 },
+  look_left:  { frames: 2, flipX: [false, true], speed: 500 },
+  look_right: { frames: 2, flipX: [true, false], speed: 500 },
+  stretch:    { frames: 4, offsetY: [0, -1, -3, -1], speed: 350 },
+};
+
+const CHAR_MOTION_WEIGHT = {
+  cat:   { bob: 3, nod: 2, look_left: 2, look_right: 2, tap: 1, stretch: 2 },
+  robot: { bob: 1, nod: 3, tap: 3, look_left: 1, look_right: 1, stretch: 1 },
+  ghost: { bob: 2, nod: 1, look_left: 3, look_right: 3, tap: 1, stretch: 1 },
+  dino:  { bob: 2, nod: 2, tap: 3, look_left: 1, look_right: 1, stretch: 3 },
+  mage:  { bob: 2, nod: 2, look_left: 2, look_right: 2, tap: 2, stretch: 2 },
+  frog:  { bob: 2, nod: 1, tap: 3, look_left: 2, look_right: 2, stretch: 2 },
+  alien: { bob: 3, nod: 3, tap: 1, look_left: 2, look_right: 2, stretch: 1 },
+  panda: { bob: 3, nod: 2, tap: 2, look_left: 2, look_right: 2, stretch: 1 },
+};
+
 // ── drawSprite
 function drawSprite(canvasEl, charId, scale=3, colorId=null) {
   const colorData = colorId ? COLORS.find(c => c.id === colorId) : COLORS[0];

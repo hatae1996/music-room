@@ -536,7 +536,15 @@
   .chat-msg.is-me { align-items:flex-end; }
   .chat-msg.is-me .chat-msg-body { border-radius:4px 0 4px 4px;border-color:var(--green);background:rgba(0,255,136,0.05); }
   .chat-msg.is-system .chat-msg-body { background:transparent;border:none;color:var(--text-dim);font-size:11px;text-align:center;width:100%; }
-  .chat-input-area { padding:10px;border-top:2px solid var(--border);display:flex;gap:8px;flex-shrink:0; }
+  .chat-msg.is-past-log .chat-msg-body { opacity:0.72; }
+  .chat-msg.is-past-log .chat-msg-name { opacity:0.85; }
+  .chat-dl-btn {
+    flex-shrink:0; background:var(--surface2); border:2px solid var(--border); color:var(--text-dim);
+    width:40px; min-width:40px; padding:6px 4px; font-size:18px; line-height:1; cursor:pointer;
+    font-family:var(--body);
+  }
+  .chat-dl-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+  .chat-input-area { padding:10px;border-top:2px solid var(--border);display:flex;gap:8px;flex-shrink:0;align-items:flex-end; }
   .chat-input-area .pixel-input { flex:1;background:var(--bg);border:2px solid var(--border);color:var(--text);padding:8px 12px;font-family:var(--body);font-size:14px;outline:none; }
   .chat-input-area .pixel-input:focus { border-color:var(--accent); }
   .send-btn { background:var(--accent);border:none;color:white;padding:8px 14px;font-family:var(--pixel);font-size:9px;cursor:pointer; }
@@ -1032,8 +1040,12 @@
       </div>
 
       <div id="panel-chat">
-        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-messages" id="chat-messages">
+          <div id="chat-archive"></div>
+          <div id="chat-live"></div>
+        </div>
         <div class="chat-input-area">
+          <button type="button" class="chat-dl-btn" id="chat-download-btn" title="대화 기록 다운로드">📥</button>
           <textarea class="pixel-input" id="chat-input" placeholder="메시지 입력..." maxlength="200" rows="1" style="resize:none;overflow:hidden;line-height:1.4;padding:10px 12px;font-family:var(--body);font-size:14px;"></textarea>
           <button class="send-btn" id="send-btn">SEND</button>
         </div>
@@ -1327,6 +1339,26 @@ function drawSprite(canvasEl, charId, scale=3, colorId=null) {
   });
 }
 
+// ── Sprint 4: 좌석 캐릭터 아이들 모션
+const IDLE_MOTIONS = {
+  bob:        { frames: 4, offsetY: [0, -1, -2, -1], speed: 300 },
+  nod:        { frames: 3, offsetY: [0, -2, 0], speed: 250 },
+  tap:        { frames: 2, scaleY: [1.0, 0.95], speed: 200 },
+  look_left:  { frames: 2, flipX: [false, true], speed: 500 },
+  look_right: { frames: 2, flipX: [true, false], speed: 500 },
+  stretch:    { frames: 4, offsetY: [0, -1, -3, -1], speed: 350 },
+};
+const CHAR_MOTION_WEIGHT = {
+  cat:   { bob: 3, nod: 2, look_left: 2, look_right: 2, tap: 1, stretch: 2 },
+  robot: { bob: 1, nod: 3, tap: 3, look_left: 1, look_right: 1, stretch: 1 },
+  ghost: { bob: 2, nod: 1, look_left: 3, look_right: 3, tap: 1, stretch: 1 },
+  dino:  { bob: 2, nod: 2, tap: 3, look_left: 1, look_right: 1, stretch: 3 },
+  mage:  { bob: 2, nod: 2, look_left: 2, look_right: 2, tap: 2, stretch: 2 },
+  frog:  { bob: 2, nod: 1, tap: 3, look_left: 2, look_right: 2, stretch: 2 },
+  alien: { bob: 3, nod: 3, tap: 1, look_left: 2, look_right: 2, stretch: 1 },
+  panda: { bob: 3, nod: 2, tap: 2, look_left: 2, look_right: 2, stretch: 1 },
+};
+
 // ── selectedChar/Color (index.html과 room.html 공통 상태)
 let selectedChar = CHARS[0].id;
 let selectedColor = COLORS[0].id;
@@ -1461,6 +1493,105 @@ function stopCharAnim(seatIdx) {
 
 function isMeDJ() {
   return !!(state.me && state.dj && state.dj.currentDJ === state.me.name);
+}
+
+const _idleTimers = [null, null, null, null];
+const _idleMotionActive = [false, false, false, false];
+
+function isSeatDJ(seatIndex) {
+  const dj = state.dj && state.dj.currentDJ;
+  const seat = state.seats[seatIndex];
+  return !!(dj && seat && seat.name === dj);
+}
+
+function pickIdleMotionForChar(charId) {
+  const weights = CHAR_MOTION_WEIGHT[charId] || CHAR_MOTION_WEIGHT.cat;
+  const keys = Object.keys(weights);
+  let total = 0;
+  keys.forEach(k => { total += weights[k]; });
+  let r = Math.random() * total;
+  for (const k of keys) {
+    r -= weights[k];
+    if (r <= 0) return k;
+  }
+  return keys[0];
+}
+
+function scheduleIdleMotion(seatIndex) {
+  if (_idleTimers[seatIndex]) clearTimeout(_idleTimers[seatIndex]);
+  const delay = 3000 + Math.random() * 5000;
+  _idleTimers[seatIndex] = setTimeout(() => {
+    _idleTimers[seatIndex] = null;
+    if (state.playing && state.seats[seatIndex] && !isSeatDJ(seatIndex)) {
+      triggerIdleMotion(seatIndex);
+    }
+    scheduleIdleMotion(seatIndex);
+  }, delay);
+}
+
+function triggerIdleMotion(seatIndex) {
+  if (_idleMotionActive[seatIndex] || !state.playing || isSeatDJ(seatIndex)) return;
+  const seat = state.seats[seatIndex];
+  if (!seat) return;
+  const seatEl = document.querySelector(`.seat[data-seat="${seatIndex}"]`);
+  if (seatEl && seatEl.classList.contains('is-bobbing')) return;
+  if (!document.getElementById(`sprite-${seatIndex}`)) return;
+  const motionName = pickIdleMotionForChar(seat.charId || 'cat');
+  const motion = IDLE_MOTIONS[motionName];
+  if (!motion) return;
+
+  _idleMotionActive[seatIndex] = true;
+  let frame = 0;
+  const runFrame = () => {
+    const cv = document.getElementById(`sprite-${seatIndex}`);
+    if (!cv || !state.playing || isSeatDJ(seatIndex)) {
+      _idleMotionActive[seatIndex] = false;
+      if (cv) cv.style.transform = '';
+      return;
+    }
+    if (frame >= motion.frames) {
+      _idleMotionActive[seatIndex] = false;
+      cv.style.transform = '';
+      return;
+    }
+    const parts = [];
+    if (motion.offsetY) {
+      const oy = motion.offsetY[Math.min(frame, motion.offsetY.length - 1)] * 3;
+      parts.push(`translateY(${oy}px)`);
+    }
+    if (motion.scaleY) {
+      const sy = motion.scaleY[Math.min(frame, motion.scaleY.length - 1)];
+      parts.push(`scaleY(${sy})`);
+    }
+    if (motion.flipX) {
+      const flip = motion.flipX[Math.min(frame, motion.flipX.length - 1)];
+      if (flip) parts.push('scaleX(-1)');
+    }
+    cv.style.transform = parts.length ? parts.join(' ') : '';
+    cv.style.transformOrigin = 'bottom center';
+    frame++;
+    setTimeout(runFrame, motion.speed);
+  };
+  runFrame();
+}
+
+function restartIdleMotionSchedules() {
+  for (let i = 0; i < 4; i++) {
+    if (_idleTimers[i]) { clearTimeout(_idleTimers[i]); _idleTimers[i] = null; }
+    _idleMotionActive[i] = false;
+    const cv = document.getElementById(`sprite-${i}`);
+    if (cv) cv.style.transform = '';
+    scheduleIdleMotion(i);
+  }
+}
+
+function stopIdleMotionSchedules() {
+  for (let i = 0; i < 4; i++) {
+    if (_idleTimers[i]) { clearTimeout(_idleTimers[i]); _idleTimers[i] = null; }
+    _idleMotionActive[i] = false;
+    const cv = document.getElementById(`sprite-${i}`);
+    if (cv) cv.style.transform = '';
+  }
 }
 
 function setSeatSlideVars(seatEl, seatIndex) {
@@ -1663,12 +1794,73 @@ function updateDJIndicator() {
 
 // ── CHAT
 function addSystemChat(msg) {
+  const live = document.getElementById('chat-live');
   const container = document.getElementById('chat-messages');
+  const target = live || container;
+  if (!target) return;
   const div = document.createElement('div');
   div.className = 'chat-msg is-system';
   div.innerHTML = `<div class="chat-msg-body">${escHtml(msg)}</div>`;
+  target.appendChild(div);
+  if (container) container.scrollTop = container.scrollHeight;
+}
+
+function getChatLogMaxTs(roomCode) {
+  const logs = JSON.parse(localStorage.getItem(`chatlog_${roomCode}`) || '[]');
+  let m = 0;
+  logs.forEach(l => { if (l.ts > m) m = l.ts; });
+  return m;
+}
+
+function appendChatLog(roomCode, entry) {
+  const key = `chatlog_${roomCode}`;
+  const logs = JSON.parse(localStorage.getItem(key) || '[]');
+  const ts = entry.ts != null ? entry.ts : Date.now();
+  const last = logs[logs.length - 1];
+  if (last && last.ts === ts && last.type === entry.type && last.msg === entry.msg && (last.nick || '') === (entry.nick || '')) return;
+  logs.push({
+    ts,
+    time: new Date(ts).toISOString(),
+    timeLabel: entry.timeLabel || '',
+    nick: entry.nick || '',
+    msg: entry.msg,
+    type: entry.type || 'chat',
+    colorId: entry.colorId || null,
+  });
+  if (logs.length > 500) logs.splice(0, logs.length - 500);
+  localStorage.setItem(key, JSON.stringify(logs));
+}
+
+function renderChatLogEntry(log, isPast, container) {
+  if (log.type === 'system') {
+    const div = document.createElement('div');
+    div.className = 'chat-msg is-system' + (isPast ? ' is-past-log' : '');
+    div.innerHTML = `<div class="chat-msg-body">${escHtml(log.msg)}</div>`;
+    container.appendChild(div);
+    return;
+  }
+  const colorData = COLORS.find(c => c.id === log.colorId) || COLORS[0];
+  const isMe = state.me && log.nick === state.me.name;
+  const div = document.createElement('div');
+  div.className = `chat-msg${isMe ? ' is-me' : ''}${isPast ? ' is-past-log' : ''}`;
+  div.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+    <span class="chat-msg-name" style="color:${colorData.hex}">${escHtml(log.nick)}</span>
+    <span class="chat-msg-time">${escHtml(log.timeLabel || '')}</span></div>
+    <div class="chat-msg-body">${escHtml(log.msg)}</div>`;
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+}
+
+function loadPastLogs(roomCode) {
+  const archive = document.getElementById('chat-archive');
+  if (!archive) return;
+  archive.innerHTML = '';
+  const logs = JSON.parse(localStorage.getItem(`chatlog_${roomCode}`) || '[]');
+  if (!logs.length) return;
+  const divider = document.createElement('div');
+  divider.className = 'chat-msg is-system';
+  divider.innerHTML = `<div class="chat-msg-body">--- 이전 대화 (${logs.length}개) ---</div>`;
+  archive.appendChild(divider);
+  logs.forEach(log => renderChatLogEntry(log, true, archive));
 }
 
 function renderHistory() {
@@ -1780,6 +1972,7 @@ async function leaveDJBooth() {
 function resetLocalPlaybackQuiet() {
   state.currentSong = null;
   state.playing = false;
+  stopIdleMotionSchedules();
   state.remoteCurrentSong = null;
   applyCurrentSongFromFirebase._lastSig = '';
   document.getElementById('player-bar')?.classList.add('hidden');
@@ -1912,6 +2105,7 @@ function applyCurrentSongFromFirebase(cs) {
       ytPlayer.seekTo(cs.pausePositionSec, true);
       ytPlayer.pauseVideo();
       state.playing = false;
+      stopIdleMotionSchedules();
       const btn = document.getElementById('play-pause-btn');
       if (btn) btn.textContent = '▶';
       return;
@@ -2023,6 +2217,9 @@ async function enterRoom() {
       .then(()=>toast('링크 복사됨! 🔗'));
   });
 
+  let chatPersistWatermark = getChatLogMaxTs(myRoomId);
+  loadPastLogs(myRoomId);
+
   // ── Firebase 리스너들
   onValue(ref(db,`rooms/${myRoomId}`), snap=>{
     if (!snap.exists()) return;
@@ -2057,15 +2254,35 @@ async function enterRoom() {
 
   // 채팅
   onValue(ref(db,`rooms/${myRoomId}/chat`), snap=>{
-    if (!snap.exists()) return;
+    const live = document.getElementById('chat-live');
     const container = document.getElementById('chat-messages');
-    container.innerHTML = '';
+    if (!live || !container) return;
+    live.innerHTML = '';
+    if (!snap.exists()) {
+      container.scrollTop = container.scrollHeight;
+      return;
+    }
     Object.values(snap.val()).sort((a,b)=>a.ts-b.ts).forEach(msg=>{
+      if (msg.ts > chatPersistWatermark) {
+        if (msg.system) {
+          appendChatLog(myRoomId, { ts: msg.ts, nick: '', msg: msg.text, type: 'system', timeLabel: '' });
+        } else {
+          appendChatLog(myRoomId, {
+            ts: msg.ts,
+            nick: msg.name,
+            msg: msg.text,
+            type: 'chat',
+            timeLabel: msg.time || '',
+            colorId: msg.colorId,
+          });
+        }
+        chatPersistWatermark = Math.max(chatPersistWatermark, msg.ts);
+      }
       if (msg.system) {
         const div = document.createElement('div');
         div.className = 'chat-msg is-system';
         div.innerHTML = `<div class="chat-msg-body">${escHtml(msg.text)}</div>`;
-        container.appendChild(div);
+        live.appendChild(div);
       } else {
         const isMe = state.me && msg.name===state.me.name;
         const colorData = COLORS.find(c=>c.id===msg.colorId)||COLORS[0];
@@ -2075,7 +2292,7 @@ async function enterRoom() {
           <span class="chat-msg-name" style="color:${colorData.hex}">${escHtml(msg.name)}</span>
           <span class="chat-msg-time">${msg.time||''}</span></div>
           <div class="chat-msg-body">${escHtml(msg.text)}</div>`;
-        container.appendChild(div);
+        live.appendChild(div);
       }
     });
     container.scrollTop = container.scrollHeight;
@@ -2209,9 +2426,21 @@ function _doPlay(song, djName) {
 function _initYTPlayer() {
   ytPlayer = new YT.Player('yt-player', {
     height: '180', width: '320',
-    playerVars: {autoplay:1, controls:0, rel:0, iv_load_policy:3, modestbranding:1, enablejsapi:1, origin:location.origin},
+    playerVars: {autoplay:1, playsinline:1, controls:0, rel:0, iv_load_policy:3, modestbranding:1, enablejsapi:1, origin:location.origin},
     events: {
-      onReady: () => { ytReady = true; },
+      onReady: () => {
+        ytReady = true;
+        const iframe = document.querySelector('#yt-player iframe');
+        if (iframe) {
+          try {
+            let a = iframe.getAttribute('allow') || '';
+            if (!a.includes('autoplay')) a = (a ? a + '; ' : '') + 'autoplay; encrypted-media; picture-in-picture';
+            iframe.setAttribute('allow', a);
+          } catch (e) {}
+          iframe.setAttribute('playsinline', '');
+          iframe.setAttribute('webkit-playsinline', '');
+        }
+      },
       onStateChange: onPlayerStateChange,
       onError: (e) => { console.warn('YT Error:', e.data); }
     }
@@ -2230,6 +2459,7 @@ function onPlayerStateChange(event) {
     renderDJRoom();
     requestWakeLock();
     startAudioKeepAlive();
+    restartIdleMotionSchedules();
     if (isMeDJ() && state.remoteCurrentSong && state.remoteCurrentSong.pausePositionSec != null && state.remoteCurrentSong.pausePositionSec >= 0) {
       fbDJResumeCurrentSong(ytPlayer.getCurrentTime());
     }
@@ -2237,6 +2467,7 @@ function onPlayerStateChange(event) {
     state.playing=false; if(btn)btn.textContent='▶';
     renderDJRoom();
     stopAudioKeepAlive();
+    stopIdleMotionSchedules();
     if (isMeDJ() && state.remoteCurrentSong && state.remoteCurrentSong.id) {
       clearTimeout(_pauseFbTimer);
       _pauseFbTimer = setTimeout(() => {
@@ -2249,6 +2480,7 @@ function onPlayerStateChange(event) {
     state.playing=false; if(btn)btn.textContent='▶';
     renderDJRoom();
     stopAudioKeepAlive();
+    stopIdleMotionSchedules();
     if (isMeDJ()) advancePlayQueueIfAny();
   }
 }
@@ -2312,7 +2544,7 @@ function startAudioKeepAlive() {
         src.connect(_audioCtx.destination);
         src.start();
       } catch(e) {}
-    }, 20000); // 20초마다
+    }, 15000);
   } catch(e) {}
 }
 
@@ -2330,7 +2562,13 @@ document.addEventListener('visibilitychange', () => {
         if (!cs || typeof cs.serverStartAt !== 'number') return;
         const expected = Math.max(0, (serverNow - cs.serverStartAt) / 1000);
         try {
-          ytPlayer.seekTo(expected, true);
+          const st = ytPlayer.getPlayerState();
+          if (state.playing && st !== YT.PlayerState.PLAYING) {
+            ytPlayer.seekTo(expected, true);
+          } else if (st === YT.PlayerState.PLAYING) {
+            const actual = ytPlayer.getCurrentTime();
+            if (Math.abs(expected - actual) > 3) ytPlayer.seekTo(expected, true);
+          }
           if (state.playing) ytPlayer.playVideo();
         } catch (e) {}
       });
@@ -3070,6 +3308,28 @@ function sendChat() {
   input.style.height = 'auto';
 }
 
+document.getElementById('chat-download-btn')?.addEventListener('click', () => {
+  if (!state.roomId) return;
+  const key = `chatlog_${state.roomId}`;
+  const logs = JSON.parse(localStorage.getItem(key) || '[]');
+  if (!logs.length) {
+    toast('저장된 대화가 없어요');
+    return;
+  }
+  const lines = logs.map(l => {
+    const t = l.time ? new Date(l.time).toLocaleString('ko-KR') : '';
+    if (l.type === 'system') return `[${t}] * ${l.msg}`;
+    return `[${t}] ${l.nick}: ${l.msg}`;
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `musicroom-chat-${state.roomId}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('대화 기록을 내려받았어요 📥');
+});
+
 // ── TABS
 function switchTab(active) {
   const tabs = ['chat','playlist','history'];
@@ -3185,12 +3445,12 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.warn('SW failed:', err));
 }
 
-// SW keep-alive ping — 백그라운드에서 SW가 종료되지 않도록 30초마다 ping
+// SW keep-alive ping — 15초 간격(백그라운드 오디오 컨텍스트 유지)
 setInterval(() => {
   if (!navigator.serviceWorker.controller) return;
   const mc = new MessageChannel();
   navigator.serviceWorker.controller.postMessage('keepalive', [mc.port2]);
-}, 30000);
+}, 15000);
 
 // ── START
 // Firebase 준비되면 입장
