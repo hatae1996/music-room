@@ -3604,6 +3604,7 @@ const SEARCH_MIN_QUERY_LEN = 2;
 const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
 const SEARCH_CACHE_KEY = 'musicroom_yt_search_cache_v1';
 let _searchRequestSeq = 0;
+let _searchAbortController = null;
 const _searchMemoryCache = new Map();
 /** ISO 8601 duration (e.g. PT4M13S) → m:ss or h:mm:ss */
 function formatYoutubeDuration(iso) {
@@ -3773,10 +3774,15 @@ async function doSearch() {
     return;
   }
   const requestSeq = ++_searchRequestSeq;
+  if (_searchAbortController) {
+    _searchAbortController.abort();
+  }
+  const abortController = new AbortController();
+  _searchAbortController = abortController;
   showSearchHint(resultsEl, '🔍 검색 중...');
   try {
     const url=`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=8&fields=items(id/videoId,snippet/title,snippet/channelTitle,snippet/thumbnails/default/url,snippet/thumbnails/medium/url),error/message&key=${ytApiKey}`;
-    const data = await (await fetch(url)).json();
+    const data = await (await fetch(url, { signal: abortController.signal })).json();
     if (requestSeq !== _searchRequestSeq) return;
     if (data.error){showSearchHint(resultsEl, `❌ 오류: ${data.error.message}`);return;}
     if (!data.items?.length){
@@ -3788,7 +3794,7 @@ async function doSearch() {
     const durationById = {};
     if (ids) {
       const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(ids)}&fields=items(id,contentDetails/duration),error/message&key=${ytApiKey}`;
-      const vJson = await (await fetch(vUrl)).json();
+      const vJson = await (await fetch(vUrl, { signal: abortController.signal })).json();
       if (requestSeq !== _searchRequestSeq) return;
       if (!vJson.error && vJson.items?.length) {
         vJson.items.forEach(v => {
@@ -3807,8 +3813,13 @@ async function doSearch() {
     setCachedSearchResult(normalizedQuery, normalizedItems);
     renderSearchResults(resultsEl, normalizedItems);
   } catch(e){
+    if (e && e.name === 'AbortError') return;
     if (requestSeq !== _searchRequestSeq) return;
     showSearchHint(resultsEl, '❌ 네트워크 오류');
+  } finally {
+    if (_searchAbortController === abortController) {
+      _searchAbortController = null;
+    }
   }
 }
 
