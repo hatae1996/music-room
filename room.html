@@ -1036,9 +1036,9 @@
     #panel-chat {
       min-height: 0;
       flex: 1;
-      display: grid;
-      /* 히스토리 영역을 최대한 확보하고, 알림/입력은 필요한 만큼만 사용 */
-      grid-template-rows: minmax(0, 1fr) auto auto;
+      /* switchTab()에서 inline !important로 display:flex를 덮어써도
+         세로 레이아웃이 유지되도록 명시 */
+      flex-direction: column !important;
       overflow: hidden;
     }
     #panel-playlist {
@@ -1057,7 +1057,8 @@
 
     /* 채팅 메시지 스크롤 */
     .chat-messages {
-      flex: 1!important;
+      /* 히스토리 영역이 가용 높이 대부분을 점유 */
+      flex: 1 1 auto !important;
       overflow-y: auto!important;
       min-height: 0!important;
       padding-top: 8px!important;
