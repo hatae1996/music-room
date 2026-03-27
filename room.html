@@ -1016,9 +1016,9 @@
       border-top: 2px solid var(--border);
       display: flex!important;
       flex-direction: column!important;
-      /* 뷰포트 높이의 50% — 메시지 5개 이상 보임, 기기 크기 따라 자동 조절 */
-      height: 50dvh!important;
-      min-height: 360px!important;
+      /* PC와 달리 모바일은 세로 분할 — 채팅 스크롤 영역을 넉넉히 (스테이지·플레이어는 위쪽 고정) */
+      height: 62dvh!important;
+      min-height: 420px!important;
       max-height: none!important;
       flex-shrink: 0!important;
       overflow: hidden!important;
@@ -1061,8 +1061,11 @@
       min-height: 0!important;
       -webkit-overflow-scrolling: touch;
     }
-    .chat-notify-row { flex-shrink: 0!important; padding: 7px 8px!important; }
-    .chat-notify-hint { font-size: 9px!important; }
+    .chat-notify-row { flex-shrink: 0!important; padding: 5px 8px!important; align-items: center!important; }
+    /* 한 줄로 줄여 메시지 리스트에 세로 공간 확보 (행 title 속성·토글은 유지) */
+    .chat-notify-hint { display: none!important; }
+    .chat-notify-label-wrap { flex-direction: row!important; align-items: center!important; gap: 8px!important; }
+    .chat-notify-title { line-height: 1.2!important; }
     .chat-input-area { flex-shrink:0!important; }
     .chat-input-area textarea,
     .chat-input-area .pixel-input { font-size:14px!important; }
