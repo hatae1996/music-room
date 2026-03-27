@@ -816,30 +816,45 @@
     .room-layout { display:flex!important; flex-direction:column!important; height:auto!important; }
     .stage-area { flex-shrink:0!important; height:auto!important; }
 
-    /* 스테이지 — 데스크톱과 동일: 2×2 + 중앙 겹침 DJ룸 */
+    /*
+     * 모바일: 겹침 부스 대신 3행 그리드
+     *   [좌석0][좌석1]  ← 캐릭터·닉네임 전체 노출
+     *   [──── DJ 부스 ────]
+     *   [좌석2][좌석3]
+     * (PC는 기존 2×2 + absolute 중앙 부스 유지)
+     */
     .room-stage {
       grid-template-columns: 1fr 1fr !important;
-      grid-template-rows: 1fr 1fr !important;
-      min-height: 300px !important;
-      height: 360px !important;
+      /* auto 행: 모바일에서 부모 높이가 불명확할 때도 캐릭터 칸이 안정적으로 잡힘 */
+      grid-template-rows: minmax(132px, auto) auto minmax(132px, auto) !important;
+      min-height: 280px !important;
+      height: auto !important;
       flex: none !important;
       overflow: visible !important;
+      align-content: stretch !important;
     }
     .dj-room {
-      position: absolute !important;
-      left: 50% !important;
-      top: 50% !important;
-      transform: translate(-50%, -50%) !important;
-      width: min(68%, 232px) !important;
-      max-width: calc(100% - 16px) !important;
-      max-height: 86% !important;
+      position: relative !important;
+      left: auto !important;
+      top: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform: none !important;
+      grid-column: 1 / -1 !important;
+      grid-row: 2 !important;
+      justify-self: stretch !important;
+      width: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
       min-height: unset !important;
-      z-index: 4 !important;
+      z-index: 2 !important;
+      margin: 2px 0 !important;
+      box-sizing: border-box !important;
     }
-    .seat[data-seat="0"] { grid-column: 1 !important; grid-row: 1 !important; z-index: 1 !important; }
-    .seat[data-seat="1"] { grid-column: 2 !important; grid-row: 1 !important; z-index: 1 !important; }
-    .seat[data-seat="2"] { grid-column: 1 !important; grid-row: 2 !important; z-index: 1 !important; }
-    .seat[data-seat="3"] { grid-column: 2 !important; grid-row: 2 !important; z-index: 1 !important; }
+    .seat[data-seat="0"] { grid-column: 1 !important; grid-row: 1 !important; z-index: 1 !important; align-self: stretch !important; }
+    .seat[data-seat="1"] { grid-column: 2 !important; grid-row: 1 !important; z-index: 1 !important; align-self: stretch !important; }
+    .seat[data-seat="2"] { grid-column: 1 !important; grid-row: 3 !important; z-index: 1 !important; align-self: stretch !important; }
+    .seat[data-seat="3"] { grid-column: 2 !important; grid-row: 3 !important; z-index: 1 !important; align-self: stretch !important; }
     .seat { padding:6px 4px!important; gap:3px!important; }
     .seat canvas.sprite { transform:scale(0.7); transform-origin:top center; }
     .center-keyword { width:110px; }
