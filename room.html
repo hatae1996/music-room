@@ -1119,6 +1119,7 @@
               <button type="button" id="dj-search-btn">🔍 검색</button>
               <button type="button" id="dj-playlist-btn">📂 플레이리스트</button>
               <button type="button" id="dj-play-pause-btn">▶</button>
+              <button type="button" id="dj-next-btn">⏭ 다음곡</button>
               <button type="button" id="dj-leave-btn">DJ 그만두기</button>
             </div>
             <div class="now-playing" id="dj-now-playing">
@@ -1159,6 +1160,7 @@
         </div>
         <div class="player-controls">
           <button class="ctrl-btn play-btn" id="play-pause-btn">▶</button>
+          <button class="ctrl-btn" id="next-btn">⏭</button>
           <button class="ctrl-btn" id="stop-btn">■</button>
           <button class="ctrl-btn" id="mute-btn">🔊</button>
         </div>
@@ -3364,6 +3366,33 @@ async function advancePlayQueueIfAny() {
   }
 }
 
+async function skipToNextSong() {
+  if (!isMeDJ() || !state.roomId || !window._fbReady) return;
+  const { db, ref, get, update } = window._fb;
+  const roomRef = ref(db, `rooms/${state.roomId}`);
+  const snap = await get(roomRef);
+  const data = snap.val() || {};
+  const q = Array.isArray(data.songQueue) ? data.songQueue : [];
+  const idx = typeof data.queueIndex === 'number' ? data.queueIndex : 0;
+  if (!q.length) {
+    toast('재생 큐가 비어있어요');
+    return;
+  }
+  if (idx >= q.length - 1) {
+    toast('다음 곡이 없어요');
+    return;
+  }
+  const nextIdx = idx + 1;
+  const song = q[nextIdx];
+  const djName = state.dj && state.dj.currentDJ;
+  if (!song || !song.id || !djName) {
+    toast('다음 곡 정보를 찾을 수 없어요');
+    return;
+  }
+  await update(roomRef, { queueIndex: nextIdx });
+  _doPlay(songToPlayShape(song), djName);
+}
+
 async function shuffleRoomQueue() {
   if (!isMeDJ() || !state.roomId || !window._fbReady) return;
   const { db, ref, get, update } = window._fb;
@@ -3895,11 +3924,17 @@ document.getElementById('play-pause-btn').addEventListener('click',()=>{
 const djSearchBtn = document.getElementById('dj-search-btn');
 const djPlBtn = document.getElementById('dj-playlist-btn');
 const djPpBtn = document.getElementById('dj-play-pause-btn');
+const djNextBtn = document.getElementById('dj-next-btn');
 const djLeaveBtn = document.getElementById('dj-leave-btn');
 if (djSearchBtn) djSearchBtn.addEventListener('click', () => openSearchModal());
 if (djPlBtn) djPlBtn.addEventListener('click', () => { switchTab('playlist'); document.querySelector('.right-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
 if (djPpBtn) djPpBtn.addEventListener('click', () => document.getElementById('play-pause-btn').click());
+if (djNextBtn) djNextBtn.addEventListener('click', () => document.getElementById('next-btn')?.click());
 if (djLeaveBtn) djLeaveBtn.addEventListener('click', () => leaveDJBooth());
+document.getElementById('next-btn').addEventListener('click', async () => {
+  if (!isMeDJ()) { toast('DJ만 조작할 수 있어요'); return; }
+  await skipToNextSong();
+});
 document.getElementById('stop-btn').addEventListener('click',async ()=>{
   if (!ytPlayer||!ytReady) return;
   if (!isMeDJ()) { toast('DJ만 조작할 수 있어요'); return; }
