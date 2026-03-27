@@ -3603,8 +3603,10 @@ const SEARCH_DEBOUNCE_MS = 700;
 const SEARCH_MIN_QUERY_LEN = 2;
 const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
 const SEARCH_CACHE_KEY = 'musicroom_yt_search_cache_v1';
+const SEARCH_QUOTA_COOLDOWN_MS = 5 * 60 * 1000;
 let _searchRequestSeq = 0;
 let _searchAbortController = null;
+let _searchQuotaBlockedUntil = 0;
 const _searchMemoryCache = new Map();
 /** ISO 8601 duration (e.g. PT4M13S) → m:ss or h:mm:ss */
 function formatYoutubeDuration(iso) {
@@ -3670,6 +3672,54 @@ function setCachedSearchResult(normalizedQuery, items) {
 }
 function showSearchHint(resultsEl, msg) {
   resultsEl.innerHTML = `<div class="search-empty">${escHtml(msg)}</div>`;
+}
+function isSearchQuotaBlocked() {
+  return _searchQuotaBlockedUntil > Date.now();
+}
+function getSearchQuotaRemainMs() {
+  return Math.max(0, _searchQuotaBlockedUntil - Date.now());
+}
+function formatRemainClock(ms) {
+  const totalSec = Math.ceil((ms || 0) / 1000);
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  return `${mm}:${String(ss).padStart(2, '0')}`;
+}
+function activateSearchQuotaCooldown() {
+  _searchQuotaBlockedUntil = Date.now() + SEARCH_QUOTA_COOLDOWN_MS;
+}
+function getLatestCachedItems() {
+  const now = Date.now();
+  let latest = null;
+  _searchMemoryCache.forEach((value) => {
+    if (!value || typeof value !== 'object') return;
+    if (typeof value.expiresAt !== 'number' || value.expiresAt < now) return;
+    if (!Array.isArray(value.items) || !value.items.length) return;
+    if (!latest || value.expiresAt > latest.expiresAt) latest = value;
+  });
+  return latest ? latest.items : null;
+}
+function showQuotaBlockedFallback(resultsEl, preferredItems) {
+  const remain = formatRemainClock(getSearchQuotaRemainMs());
+  const fallbackItems = Array.isArray(preferredItems) && preferredItems.length
+    ? preferredItems
+    : getLatestCachedItems();
+  if (fallbackItems && fallbackItems.length) {
+    renderSearchResults(resultsEl, fallbackItems);
+    toast(`YouTube 검색 할당량 소진으로 ${remain} 동안 캐시 결과를 보여줘요.`);
+    return true;
+  }
+  showSearchHint(resultsEl, `YouTube 검색 할당량이 소진되어 ${remain} 동안 검색이 제한됩니다.`);
+  toast(`YouTube 검색 할당량 소진. ${remain} 후 다시 시도해주세요.`);
+  return false;
+}
+function isQuotaExceededError(errObj) {
+  if (!errObj || typeof errObj !== 'object') return false;
+  if (errObj.code === 403) return true;
+  if (errObj.status === 'RESOURCE_EXHAUSTED') return true;
+  const reason = String(errObj.errors?.[0]?.reason || '').toLowerCase();
+  const msg = String(errObj.message || '').toLowerCase();
+  return reason.includes('quotaexceeded') || msg.includes('quota');
 }
 function renderSearchResults(resultsEl, items) {
   resultsEl.innerHTML = '';
@@ -3765,6 +3815,10 @@ async function doSearch() {
   }
   const normalizedQuery = normalizeSearchQuery(q);
   const cachedItems = getCachedSearchResult(normalizedQuery);
+  if (isSearchQuotaBlocked()) {
+    showQuotaBlockedFallback(resultsEl, cachedItems);
+    return;
+  }
   if (cachedItems && cachedItems.length) {
     renderSearchResults(resultsEl, cachedItems);
     return;
@@ -3784,7 +3838,15 @@ async function doSearch() {
     const url=`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=8&fields=items(id/videoId,snippet/title,snippet/channelTitle,snippet/thumbnails/default/url,snippet/thumbnails/medium/url),error/message&key=${ytApiKey}`;
     const data = await (await fetch(url, { signal: abortController.signal })).json();
     if (requestSeq !== _searchRequestSeq) return;
-    if (data.error){showSearchHint(resultsEl, `❌ 오류: ${data.error.message}`);return;}
+    if (data.error){
+      if (isQuotaExceededError(data.error)) {
+        activateSearchQuotaCooldown();
+        showQuotaBlockedFallback(resultsEl, cachedItems);
+        return;
+      }
+      showSearchHint(resultsEl, `❌ 오류: ${data.error.message}`);
+      return;
+    }
     if (!data.items?.length){
       setCachedSearchResult(normalizedQuery, []);
       showSearchHint(resultsEl, '검색 결과가 없어요 🎵');
@@ -3796,6 +3858,9 @@ async function doSearch() {
       const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(ids)}&fields=items(id,contentDetails/duration),error/message&key=${ytApiKey}`;
       const vJson = await (await fetch(vUrl, { signal: abortController.signal })).json();
       if (requestSeq !== _searchRequestSeq) return;
+      if (vJson.error && isQuotaExceededError(vJson.error)) {
+        activateSearchQuotaCooldown();
+      }
       if (!vJson.error && vJson.items?.length) {
         vJson.items.forEach(v => {
           const d = v.contentDetails?.duration;
