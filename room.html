@@ -306,6 +306,53 @@
     margin-top: 4px;
   }
 
+  #save-current-btn {
+    background: transparent; border: 2px solid var(--purple); color: var(--purple);
+    padding: 6px 10px; font-size: 16px; line-height: 1; cursor: pointer; flex-shrink: 0;
+    border-radius: 2px;
+  }
+  #save-current-btn:hover:not(:disabled) { background: rgba(168,85,247,0.15); }
+  #save-current-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .queue-panel {
+    width: 100%;
+    margin-top: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-family: var(--body);
+    font-size: 11px;
+  }
+  .queue-panel-header {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .queue-toggle-btn {
+    background: var(--surface2); border: 2px solid var(--border); color: var(--text);
+    padding: 4px 8px; font-family: var(--pixel); font-size: 6px; cursor: pointer;
+  }
+  .queue-toggle-btn:hover { border-color: var(--accent); }
+  .queue-summary { font-family: var(--pixel); font-size: 6px; color: var(--text-dim); }
+  .queue-panel-body { padding: 8px; border-top: 1px solid var(--border); }
+  .queue-panel-body.collapsed { display: none; }
+  #queue-list { margin: 0; padding-left: 18px; max-height: 140px; overflow-y: auto; }
+  #queue-list li { margin-bottom: 4px; color: var(--text-dim); }
+  #queue-list li.is-current { color: var(--accent2); font-weight: 700; }
+  .queue-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .queue-actions button {
+    background: var(--surface2); border: 2px solid var(--border); color: var(--text);
+    padding: 5px 10px; font-family: var(--pixel); font-size: 6px; cursor: pointer;
+  }
+  .queue-actions button:not(:disabled):hover { border-color: var(--purple); }
+  .queue-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .pl-play-all-btn {
+    background: transparent; border: 1px solid var(--accent2); color: var(--accent2);
+    padding: 4px 8px; font-family: var(--pixel); font-size: 6px; cursor: pointer; flex-shrink: 0;
+  }
+  .pl-play-all-btn:hover:not(:disabled) { background: rgba(245,166,35,0.12); }
+  .pl-play-all-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   .seat {
     border: 1px solid var(--border);
     display: flex; flex-direction: column;
@@ -679,11 +726,18 @@
   .modal-search .pixel-input { flex:1;background:var(--bg);border:2px solid var(--border);color:var(--text);padding:10px 12px;font-family:var(--body);font-size:14px;outline:none; }
   .search-btn { background:var(--purple);border:none;color:white;padding:10px 14px;font-family:var(--pixel);font-size:8px;cursor:pointer; }
   .search-results { flex:1;overflow-y:auto;padding:0 18px 18px; }
-  .search-result-item { display:flex;gap:10px;padding:10px;border:1px solid transparent;cursor:pointer;margin-bottom:5px;align-items:center; }
+  .search-result-item { display:flex;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:5px;align-items:center;background:var(--surface2); }
   .search-result-item:hover { border-color:var(--purple);background:rgba(168,85,247,0.05); }
   .result-thumb { width:80px;height:56px;object-fit:cover;border:1px solid var(--border);flex-shrink:0; }
   .result-title { font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical; }
   .result-channel { font-size:12px;color:var(--text-dim); }
+  .result-actions { display:flex;flex-direction:column;gap:6px;flex-shrink:0; }
+  .result-actions button {
+    background:var(--surface2);border:2px solid var(--border);color:var(--text);
+    padding:6px 10px;font-family:var(--pixel);font-size:6px;cursor:pointer;white-space:nowrap;
+  }
+  .result-actions button:not(:disabled):hover { border-color:var(--purple);color:var(--purple); }
+  .result-actions button:disabled { opacity:0.45;cursor:not-allowed; }
   .search-empty { text-align:center;padding:40px;font-family:var(--pixel);font-size:8px;color:var(--text-dim);line-height:2; }
 
   /* REACTION EFFECTS */
@@ -917,9 +971,23 @@
                 <div id="song-title">-</div>
                 <div id="song-channel">-</div>
               </div>
+              <button type="button" id="save-current-btn" title="플레이리스트에 저장" disabled>💾</button>
             </div>
           </div>
           <div class="dj-queue-row" id="dj-queue-display"></div>
+          <div class="queue-panel" id="queue-panel" style="display:none">
+            <div class="queue-panel-header">
+              <button type="button" class="queue-toggle-btn" id="queue-toggle-btn">▼ 재생 큐</button>
+              <span class="queue-summary" id="queue-summary"></span>
+            </div>
+            <div class="queue-panel-body" id="queue-panel-body">
+              <ol id="queue-list"></ol>
+              <div class="queue-actions">
+                <button type="button" id="queue-shuffle-btn">🔀 셔플</button>
+                <button type="button" id="queue-clear-btn">✕ 큐 취소</button>
+              </div>
+            </div>
+          </div>
         </div>
         <!--
         <div class="center-keyword" id="center-keyword">...</div>
@@ -959,6 +1027,7 @@
 
       <div class="tab-bar">
         <button class="tab-btn active" id="tab-chat">💬 CHAT</button>
+        <button class="tab-btn" id="tab-playlist">📂 PL</button>
         <button class="tab-btn" id="tab-history">🎵 PLAYED</button>
       </div>
 
@@ -970,7 +1039,12 @@
         </div>
       </div>
 
-      <!-- Sprint 3: 참여자별 플레이리스트 패널 재작성 예정 -->
+      <div id="panel-playlist">
+        <div class="playlist-toolbar">
+          <button type="button" class="pl-search-btn" id="pl-new-folder-btn">＋ 폴더</button>
+        </div>
+        <div class="playlist-body" id="playlist-body-root"></div>
+      </div>
 
       <div id="panel-history"></div>
     </div>
@@ -1000,6 +1074,20 @@
 </div>
 
 <div class="toast-container" id="toast-container"></div>
+
+<div id="folder-picker" aria-hidden="true">
+  <div class="folder-picker-box">
+    <div class="folder-picker-header">
+      <div class="folder-picker-title" id="folder-picker-title">폴더에 저장</div>
+      <button type="button" class="folder-picker-close" id="folder-picker-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="folder-picker-list" id="folder-picker-list"></div>
+    <div class="folder-picker-new">
+      <input type="text" id="folder-picker-new-input" placeholder="새 폴더 이름..." maxlength="40">
+      <button type="button" class="folder-picker-new-btn" id="folder-picker-new-btn">만들기</button>
+    </div>
+  </div>
+</div>
 
 <!-- Firebase -->
 <script type="module">
@@ -1319,6 +1407,8 @@ const state = {
   currentSong: null,
   history: [],
   rhythmOn: false,
+  songQueue: [],
+  queueIndex: 0,
 };
 
 let ytPlayer = null, ytReady = false;
@@ -1446,6 +1536,8 @@ function renderDJRoom() {
     }
     const ctrl = document.getElementById('dj-controls');
     if (ctrl) ctrl.style.display = 'none';
+    const saveCurE = document.getElementById('save-current-btn');
+    if (saveCurE) saveCurE.disabled = true;
     return;
   }
   if (emptyEl) emptyEl.style.display = 'none';
@@ -1471,8 +1563,14 @@ function renderDJRoom() {
     if (chEl) chEl.textContent = '-';
   }
 
+  const saveCur = document.getElementById('save-current-btn');
+  if (saveCur) saveCur.disabled = !(cs && cs.id);
+
   const pp = document.getElementById('dj-play-pause-btn');
   if (pp) pp.textContent = state.playing ? '⏸' : '▶';
+
+  const plTab = document.getElementById('tab-playlist');
+  if (plTab && plTab.classList.contains('active')) renderPlaylistPanel();
 }
 
 // ── RENDER SEATS
@@ -1651,7 +1749,7 @@ async function applyDJRole() {
 
 async function leaveDJBooth() {
   if (!isMeDJ() || !state.roomId || !window._fbReady) return;
-  const { db, ref, get, set } = window._fb;
+  const { db, ref, get, set, update } = window._fb;
   const djRef = ref(db, `rooms/${state.roomId}/dj`);
   const snap = await get(djRef);
   const d = snap.val() || {};
@@ -1669,6 +1767,7 @@ async function leaveDJBooth() {
 
   if (boothWillBeEmpty) {
     await set(ref(db, `rooms/${state.roomId}/currentSong`), null);
+    await update(ref(db, `rooms/${state.roomId}`), { songQueue: [], queueIndex: 0 });
     resetLocalPlaybackQuiet();
   }
 
@@ -1859,6 +1958,7 @@ async function enterRoom() {
       seats: {},
       history: {},
       songQueue: [],
+      queueIndex: 0,
     });
     seatIndex = 0;
   } else {
@@ -1874,7 +1974,11 @@ async function enterRoom() {
       await update(roomRef, {
         dj: { currentDJ: djName, djQueue: [] },
         songQueue: data.songQueue || [],
+        queueIndex: typeof data.queueIndex === 'number' ? data.queueIndex : 0,
       });
+    }
+    if (typeof data.queueIndex !== 'number') {
+      update(roomRef, { queueIndex: 0 });
     }
     const seats = data.seats||{};
     const taken = Object.values(seats).map(s=>s.seatIndex);
@@ -1991,6 +2095,15 @@ async function enterRoom() {
     }
     const cs = snap.val();
     applyCurrentSongFromFirebase(cs);
+  });
+
+  onValue(ref(db,`rooms/${myRoomId}/songQueue`), snap=>{
+    state.songQueue = snap.exists() && Array.isArray(snap.val()) ? snap.val() : [];
+    renderQueuePanel();
+  });
+  onValue(ref(db,`rooms/${myRoomId}/queueIndex`), snap=>{
+    state.queueIndex = snap.exists() && typeof snap.val() === 'number' ? snap.val() : 0;
+    renderQueuePanel();
   });
 
   setInterval(async () => {
@@ -2136,6 +2249,7 @@ function onPlayerStateChange(event) {
     state.playing=false; if(btn)btn.textContent='▶';
     renderDJRoom();
     stopAudioKeepAlive();
+    if (isMeDJ()) advancePlayQueueIfAny();
   }
 }
 
@@ -2445,13 +2559,402 @@ function launchEmoji(emoji) {
   }
 }
 
+// ── PLAYLIST (localStorage musicroom_playlists_[닉네임])
+function playlistsStorageKey(nick) {
+  return 'musicroom_playlists_' + String(nick || '').replace(/[.#$\[\]]/g, '_');
+}
+function loadPlaylists(nick) {
+  try {
+    const raw = localStorage.getItem(playlistsStorageKey(nick));
+    if (!raw) return {};
+    const o = JSON.parse(raw);
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+  } catch (e) { return {}; }
+}
+function savePlaylists(nick, data) {
+  localStorage.setItem(playlistsStorageKey(nick), JSON.stringify(data));
+}
+function createFolder(nick, folderName) {
+  const name = (folderName || '').trim();
+  if (!name) return false;
+  const data = loadPlaylists(nick);
+  if (data[name]) { toast('같은 이름의 폴더가 있어요'); return false; }
+  data[name] = [];
+  savePlaylists(nick, data);
+  return true;
+}
+function deleteFolder(nick, folderName) {
+  const data = loadPlaylists(nick);
+  delete data[folderName];
+  savePlaylists(nick, data);
+}
+function renameFolder(nick, oldName, newName) {
+  const nn = (newName || '').trim();
+  if (!nn || nn === oldName) return false;
+  const data = loadPlaylists(nick);
+  if (!data[oldName]) return false;
+  if (data[nn]) { toast('이미 있는 폴더 이름이에요'); return false; }
+  data[nn] = data[oldName];
+  delete data[oldName];
+  savePlaylists(nick, data);
+  return true;
+}
+function addSong(nick, folderName, song) {
+  const data = loadPlaylists(nick);
+  if (!data[folderName]) data[folderName] = [];
+  const entry = {
+    id: song.id,
+    title: song.title || '',
+    channel: song.channel || '',
+    thumbnail: song.thumbnail || song.thumb || ''
+  };
+  if (data[folderName].some(s => s.id === entry.id)) {
+    toast('이미 폴더에 있는 곡이에요');
+    return false;
+  }
+  data[folderName].push(entry);
+  savePlaylists(nick, data);
+  return true;
+}
+function removeSong(nick, folderName, songId) {
+  const data = loadPlaylists(nick);
+  if (!data[folderName]) return;
+  data[folderName] = data[folderName].filter(s => s.id !== songId);
+  savePlaylists(nick, data);
+}
+function moveSong(nick, folderName, fromIdx, toIdx) {
+  const data = loadPlaylists(nick);
+  const arr = data[folderName];
+  if (!arr || fromIdx < 0 || fromIdx >= arr.length || toIdx < 0 || toIdx >= arr.length) return;
+  const [item] = arr.splice(fromIdx, 1);
+  arr.splice(toIdx, 0, item);
+  savePlaylists(nick, data);
+}
+
+function normalizeQueueSong(s) {
+  if (!s || !s.id) return null;
+  const thumbnail = s.thumbnail || s.thumb || '';
+  return { id: s.id, title: s.title || '', channel: s.channel || '', thumbnail };
+}
+
+function songToPlayShape(s) {
+  const n = normalizeQueueSong(s);
+  if (!n) return null;
+  return { id: n.id, title: n.title, channel: n.channel, thumb: n.thumbnail };
+}
+
+async function fbSetRoomQueue(items, index) {
+  if (!state.roomId || !window._fbReady || !isMeDJ()) return;
+  const { db, ref, update } = window._fb;
+  await update(ref(db, `rooms/${state.roomId}`), {
+    songQueue: items,
+    queueIndex: index
+  });
+}
+
+async function fbClearRoomQueue() {
+  if (!state.roomId || !window._fbReady || !isMeDJ()) return;
+  const { db, ref, update } = window._fb;
+  await update(ref(db, `rooms/${state.roomId}`), { songQueue: [], queueIndex: 0 });
+}
+
+async function djPlayNowWithQueue(songFlat, closeModal) {
+  if (!state.me || !isMeDJ()) return;
+  const song = songToPlayShape(songFlat);
+  if (!song) return;
+  const q = [normalizeQueueSong(songFlat)];
+  await fbSetRoomQueue(q, 0);
+  const seatIndex = state.me.seatIndex;
+  if (state.seats[seatIndex]) state.seats[seatIndex].song = song;
+  fbUpdateSong(seatIndex, song);
+  renderSeats();
+  _doPlay(song, state.me.name);
+  if (closeModal) document.getElementById('search-modal').classList.remove('open');
+}
+
+async function playFolderAll(folderName) {
+  if (!isMeDJ()) return;
+  const pl = loadPlaylists(myName);
+  const list = pl[folderName];
+  if (!list || !list.length) { toast('폴더가 비었어요'); return; }
+  const normalized = list.map(s => normalizeQueueSong(s)).filter(Boolean);
+  await fbSetRoomQueue(normalized, 0);
+  const first = songToPlayShape(normalized[0]);
+  if (state.me) {
+    const seatIndex = state.me.seatIndex;
+    if (state.seats[seatIndex]) state.seats[seatIndex].song = first;
+    fbUpdateSong(seatIndex, first);
+    renderSeats();
+    _doPlay(first, state.me.name);
+  }
+}
+
+async function advancePlayQueueIfAny() {
+  if (!isMeDJ() || !state.roomId || !window._fbReady) return;
+  const { db, ref, get, update } = window._fb;
+  const roomRef = ref(db, `rooms/${state.roomId}`);
+  const snap = await get(roomRef);
+  const data = snap.val() || {};
+  const q = Array.isArray(data.songQueue) ? data.songQueue : [];
+  let idx = typeof data.queueIndex === 'number' ? data.queueIndex : 0;
+  if (idx < q.length - 1) {
+    const nextIdx = idx + 1;
+    const song = q[nextIdx];
+    const djName = state.dj && state.dj.currentDJ;
+    if (!song || !song.id || !djName) return;
+    await update(roomRef, { queueIndex: nextIdx });
+    _doPlay(songToPlayShape(song), djName);
+  } else {
+    await update(roomRef, { songQueue: [], queueIndex: 0 });
+  }
+}
+
+async function shuffleRoomQueue() {
+  if (!isMeDJ() || !state.roomId || !window._fbReady) return;
+  const { db, ref, get, update } = window._fb;
+  const roomRef = ref(db, `rooms/${state.roomId}`);
+  const snap = await get(roomRef);
+  const data = snap.val() || {};
+  let q = [...(Array.isArray(data.songQueue) ? data.songQueue : [])];
+  if (q.length < 2) return;
+  const curId = state.remoteCurrentSong && state.remoteCurrentSong.id;
+  for (let i = q.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [q[i], q[j]] = [q[j], q[i]];
+  }
+  let newIdx = q.findIndex(s => s && s.id === curId);
+  if (newIdx < 0) newIdx = 0;
+  await update(roomRef, { songQueue: q, queueIndex: newIdx });
+  toast('재생 큐를 섞었어요 🔀');
+}
+
+let _pendingSaveSong = null;
+let _folderPickFromNowPlaying = false;
+
+function openFolderPicker(song, titleText, opts) {
+  _pendingSaveSong = song;
+  _folderPickFromNowPlaying = !!(opts && opts.fromNowPlaying);
+  const t = document.getElementById('folder-picker-title');
+  if (t) t.textContent = titleText || '폴더에 저장';
+  renderFolderPickerList();
+  document.getElementById('folder-picker').classList.add('open');
+  document.getElementById('folder-picker').setAttribute('aria-hidden', 'false');
+}
+
+function closeFolderPicker() {
+  _pendingSaveSong = null;
+  _folderPickFromNowPlaying = false;
+  document.getElementById('folder-picker').classList.remove('open');
+  document.getElementById('folder-picker').setAttribute('aria-hidden', 'true');
+}
+
+function renderFolderPickerList() {
+  const list = document.getElementById('folder-picker-list');
+  if (!list) return;
+  const data = loadPlaylists(myName);
+  const keys = Object.keys(data).sort();
+  if (!keys.length) {
+    list.innerHTML = '<div class="pl-empty" style="padding:12px;">폴더가 없어요. 아래에서 새로 만들 수 있어요.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  keys.forEach(name => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'folder-picker-item';
+    row.innerHTML = `<span class="folder-picker-item-name">${escHtml(name)}</span><span class="folder-picker-item-count">${(data[name] || []).length}곡</span>`;
+    row.addEventListener('click', () => {
+      if (!_pendingSaveSong) return;
+      if (addSong(myName, name, _pendingSaveSong)) {
+        toast(`"${name}"에 저장됨 ✅`);
+        if (_folderPickFromNowPlaying) {
+          const b = document.getElementById('save-current-btn');
+          if (b) {
+            const prev = b.textContent;
+            b.textContent = '✅';
+            setTimeout(() => { b.textContent = prev; }, 900);
+          }
+        }
+        closeFolderPicker();
+        renderPlaylistPanel();
+      }
+    });
+    list.appendChild(row);
+  });
+}
+
+function renderPlaylistPanel() {
+  const root = document.getElementById('playlist-body-root');
+  if (!root) return;
+  const data = loadPlaylists(myName);
+  const names = Object.keys(data).sort();
+  if (!names.length) {
+    root.innerHTML = '<div class="pl-empty">＋ 폴더 버튼으로 폴더를 만들고<br>검색 결과나 재생 중인 곡을 저장할 수 있어요.</div>';
+    return;
+  }
+  root.innerHTML = '';
+  const canDJ = isMeDJ();
+  names.forEach(folderName => {
+    const songs = data[folderName] || [];
+    const fold = document.createElement('div');
+    fold.className = 'pl-folder open';
+    const header = document.createElement('div');
+    header.className = 'pl-folder-header';
+    header.innerHTML = `<span class="pl-folder-icon">📁</span>
+      <span class="pl-folder-name">${escHtml(folderName)}</span>
+      <span class="pl-folder-meta">${songs.length}곡</span>
+      <button type="button" class="pl-play-all-btn" ${canDJ ? '' : 'disabled'} title="${canDJ ? '' : 'DJ만 재생 가능'}">▶ 전체 재생</button>
+      <span class="pl-folder-arrow">▼</span>`;
+    const playAllBtn = header.querySelector('.pl-play-all-btn');
+    if (playAllBtn) {
+      playAllBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!isMeDJ() || playAllBtn.disabled) return;
+        playFolderAll(folderName);
+      });
+    }
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:6px;margin-left:auto;';
+    const renameB = document.createElement('button');
+    renameB.type = 'button';
+    renameB.className = 'pl-btn';
+    renameB.textContent = '✎';
+    renameB.title = '이름 변경';
+    renameB.addEventListener('click', e => {
+      e.stopPropagation();
+      const nn = prompt('새 폴더 이름', folderName);
+      if (nn && renameFolder(myName, folderName, nn)) renderPlaylistPanel();
+    });
+    const delB = document.createElement('button');
+    delB.type = 'button';
+    delB.className = 'pl-btn remove';
+    delB.textContent = '🗑';
+    delB.title = '폴더 삭제';
+    delB.addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm(`"${folderName}" 폴더를 삭제할까요?`)) {
+        deleteFolder(myName, folderName);
+        renderPlaylistPanel();
+      }
+    });
+    actions.appendChild(renameB);
+    actions.appendChild(delB);
+    header.appendChild(actions);
+
+    header.addEventListener('click', ev => {
+      if (ev.target.closest('button')) return;
+      fold.classList.toggle('open');
+    });
+
+    const body = document.createElement('div');
+    body.className = 'pl-folder-songs';
+    songs.forEach((s, idx) => {
+      const row = document.createElement('div');
+      row.className = 'pl-item';
+      const th = escHtml(s.thumbnail || s.thumb || '');
+      row.innerHTML = `
+        <img class="pl-thumb" src="${th}" alt="">
+        <div class="pl-info">
+          <div class="pl-title">${escHtml(s.title || '')}</div>
+          <div class="pl-channel">${escHtml(s.channel || '')}</div>
+        </div>
+        <div class="pl-actions"></div>`;
+      const moveDiv = row.querySelector('.pl-actions');
+      const up = document.createElement('button');
+      up.type = 'button';
+      up.className = 'pl-btn';
+      up.textContent = '↑';
+      up.disabled = idx === 0;
+      up.addEventListener('click', () => { moveSong(myName, folderName, idx, idx - 1); renderPlaylistPanel(); });
+      const down = document.createElement('button');
+      down.type = 'button';
+      down.className = 'pl-btn';
+      down.textContent = '↓';
+      down.disabled = idx === songs.length - 1;
+      down.addEventListener('click', () => { moveSong(myName, folderName, idx, idx + 1); renderPlaylistPanel(); });
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'pl-btn remove';
+      rm.textContent = '✕';
+      rm.addEventListener('click', () => { removeSong(myName, folderName, s.id); renderPlaylistPanel(); });
+      moveDiv.appendChild(up);
+      moveDiv.appendChild(down);
+      moveDiv.appendChild(rm);
+      body.appendChild(row);
+    });
+    if (!songs.length) body.innerHTML = '<div class="pl-folder-empty">곡이 없어요</div>';
+
+    fold.appendChild(header);
+    fold.appendChild(body);
+    root.appendChild(fold);
+  });
+}
+
+let _queuePanelCollapsed = false;
+function renderQueuePanel() {
+  const wrap = document.getElementById('queue-panel');
+  if (!wrap) return;
+  const q = state.songQueue || [];
+  if (!q.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  const idx = typeof state.queueIndex === 'number' ? state.queueIndex : 0;
+  const sum = document.getElementById('queue-summary');
+  if (sum) sum.textContent = `${idx + 1} / ${q.length}`;
+  const list = document.getElementById('queue-list');
+  if (list) {
+    list.innerHTML = '';
+    q.forEach((s, i) => {
+      const li = document.createElement('li');
+      if (i === idx) li.className = 'is-current';
+      li.textContent = (s && (s.title || s.id)) ? (s.title || s.id) : '(곡)';
+      list.appendChild(li);
+    });
+  }
+  const shuffleBtn = document.getElementById('queue-shuffle-btn');
+  const clearBtn = document.getElementById('queue-clear-btn');
+  const canDj = isMeDJ();
+  if (shuffleBtn) {
+    shuffleBtn.disabled = !canDj;
+    shuffleBtn.title = canDj ? '재생 큐 순서 섞기' : 'DJ만 사용 가능';
+  }
+  if (clearBtn) {
+    clearBtn.disabled = !canDj;
+    clearBtn.title = canDj ? '재생 큐 비우기' : 'DJ만 사용 가능';
+  }
+  const body = document.getElementById('queue-panel-body');
+  const toggle = document.getElementById('queue-toggle-btn');
+  if (body) body.classList.toggle('collapsed', _queuePanelCollapsed);
+  if (toggle) toggle.textContent = _queuePanelCollapsed ? '▶ 재생 큐' : '▼ 재생 큐';
+}
+
 // ── SONG SEARCH
+let _searchDebounceTimer = null;
 function openSearchModal() {
   document.getElementById('search-modal').classList.add('open');
 }
 document.getElementById('modal-close').addEventListener('click',()=>document.getElementById('search-modal').classList.remove('open'));
-document.getElementById('search-btn').addEventListener('click',doSearch);
-document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+document.getElementById('search-btn').addEventListener('click', () => { clearTimeout(_searchDebounceTimer); doSearch(); });
+document.getElementById('search-input').addEventListener('keydown',e=>{
+  if (e.key === 'Enter') {
+    clearTimeout(_searchDebounceTimer);
+    doSearch();
+  }
+});
+document.getElementById('search-input').addEventListener('input', () => {
+  clearTimeout(_searchDebounceTimer);
+  _searchDebounceTimer = setTimeout(() => {
+    const qq = document.getElementById('search-input').value.trim();
+    const resultsEl = document.getElementById('search-results');
+    if (!qq) {
+      resultsEl.innerHTML = '<div class="search-empty">검색어를 입력하고 노래를 찾아보세요 🎵</div>';
+      return;
+    }
+    doSearch();
+  }, 500);
+});
 
 async function doSearch() {
   const q = document.getElementById('search-input').value.trim();
@@ -2464,6 +2967,7 @@ async function doSearch() {
     if (data.error){resultsEl.innerHTML=`<div class="search-empty">❌ 오류: ${data.error.message}</div>`;return;}
     if (!data.items?.length){resultsEl.innerHTML='<div class="search-empty">검색 결과가 없어요 🎵</div>';return;}
     resultsEl.innerHTML = '';
+    const dj = isMeDJ();
     data.items.forEach(item => {
       const vid = item.id.videoId;
       const title = item.snippet.title;
@@ -2471,34 +2975,34 @@ async function doSearch() {
       const channel = item.snippet.channelTitle;
       const div = document.createElement('div');
       div.className = 'search-result-item';
-      div.style.cssText = 'position:relative;';
+      const songPayload = { id: vid, title, thumb, channel, thumbnail: thumb };
       div.innerHTML = `
         <img class="result-thumb" src="${escHtml(thumb)}" alt="" loading="lazy">
         <div style="flex:1;min-width:0;">
           <div class="result-title">${escHtml(title)}</div>
           <div class="result-channel">${escHtml(channel)}</div>
+        </div>
+        <div class="result-actions">
+          <button type="button" class="search-play-btn">▶ 재생</button>
+          <button type="button" class="search-save-btn">＋ 저장</button>
         </div>`;
-      div.addEventListener('click', () => {
-        selectSong(vid, title, thumb, channel);
+      const playB = div.querySelector('.search-play-btn');
+      const saveB = div.querySelector('.search-save-btn');
+      playB.disabled = !dj;
+      playB.title = dj ? '지금 재생' : 'DJ만 재생 가능';
+      playB.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!dj) return;
+        djPlayNowWithQueue(songPayload, true);
+      });
+      saveB.addEventListener('click', e => {
+        e.stopPropagation();
+        openFolderPicker(songPayload, '플레이리스트에 저장');
       });
       resultsEl.appendChild(div);
     });
   } catch(e){resultsEl.innerHTML='<div class="search-empty">❌ 네트워크 오류</div>';}
 }
-
-function selectSong(videoId, title, thumb, channel = '') {
-  if (!state.me) return;
-  const seatIndex = state.me.seatIndex;
-  const song = { id: videoId, title, thumb, channel };
-  if (state.seats[seatIndex]) state.seats[seatIndex].song = song;
-  fbUpdateSong(seatIndex, song);
-  document.getElementById('search-modal').classList.remove('open');
-  renderSeats();
-  fbSendSystemChat(state.roomId,`${state.me.name}님이 "${title}"를 선정했습니다 🎵`);
-  toast('노래 선정 완료! 🎵');
-}
-
-// Sprint 3: 플레이리스트·폴더 피커 재작성 예정
 
 // ── PLAYER CONTROLS
 document.getElementById('play-pause-btn').addEventListener('click',()=>{
@@ -2513,15 +3017,16 @@ const djPlBtn = document.getElementById('dj-playlist-btn');
 const djPpBtn = document.getElementById('dj-play-pause-btn');
 const djLeaveBtn = document.getElementById('dj-leave-btn');
 if (djSearchBtn) djSearchBtn.addEventListener('click', () => openSearchModal());
-if (djPlBtn) djPlBtn.addEventListener('click', () => toast('플레이리스트는 Sprint 3에서 연결됩니다 📂'));
+if (djPlBtn) djPlBtn.addEventListener('click', () => { switchTab('playlist'); document.querySelector('.right-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
 if (djPpBtn) djPpBtn.addEventListener('click', () => document.getElementById('play-pause-btn').click());
 if (djLeaveBtn) djLeaveBtn.addEventListener('click', () => leaveDJBooth());
-document.getElementById('stop-btn').addEventListener('click',()=>{
+document.getElementById('stop-btn').addEventListener('click',async ()=>{
   if (!ytPlayer||!ytReady) return;
   if (!isMeDJ()) { toast('DJ만 조작할 수 있어요'); return; }
   if (window._fbReady) {
-    const {db, ref, set} = window._fb;
-    set(ref(db, `rooms/${state.roomId}/currentSong`), null);
+    const {db, ref, set, update} = window._fb;
+    await set(ref(db, `rooms/${state.roomId}/currentSong`), null);
+    await update(ref(db, `rooms/${state.roomId}`), { songQueue: [], queueIndex: 0 });
   }
   resetLocalPlaybackQuiet();
   fbSendSystemChat(state.roomId,'재생이 멈췄습니다.');
@@ -2567,7 +3072,7 @@ function sendChat() {
 
 // ── TABS
 function switchTab(active) {
-  const tabs = ['chat','history'];
+  const tabs = ['chat','playlist','history'];
   tabs.forEach(t => {
     const btn = document.getElementById(`tab-${t}`);
     const panel = document.getElementById(`panel-${t}`);
@@ -2575,16 +3080,67 @@ function switchTab(active) {
     const isActive = t === active;
     btn.classList.toggle('active', isActive);
     if (isActive) {
-      panel.style.setProperty('display', t === 'history' ? 'block' : 'flex', 'important');
+      const flexTabs = t === 'chat' || t === 'playlist';
+      panel.style.setProperty('display', flexTabs ? 'flex' : 'block', 'important');
       panel.style.setProperty('flex', '1', 'important');
     } else {
       panel.style.setProperty('display', 'none', 'important');
     }
   });
   if (active === 'history') renderHistory();
+  if (active === 'playlist') renderPlaylistPanel();
 }
 document.getElementById('tab-chat').addEventListener('click', () => switchTab('chat'));
+document.getElementById('tab-playlist').addEventListener('click', () => switchTab('playlist'));
 document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
+
+document.getElementById('pl-new-folder-btn')?.addEventListener('click', () => {
+  const name = prompt('새 폴더 이름');
+  if (name && createFolder(myName, name)) {
+    renderPlaylistPanel();
+    toast('폴더가 만들어졌어요 📂');
+  }
+});
+
+document.getElementById('folder-picker-close')?.addEventListener('click', () => closeFolderPicker());
+document.getElementById('folder-picker')?.addEventListener('click', e => {
+  if (e.target.id === 'folder-picker') closeFolderPicker();
+});
+document.querySelector('.folder-picker-box')?.addEventListener('click', e => e.stopPropagation());
+document.getElementById('folder-picker-new-btn')?.addEventListener('click', () => {
+  const inp = document.getElementById('folder-picker-new-input');
+  const name = (inp && inp.value || '').trim();
+  if (!name) return;
+  if (createFolder(myName, name)) {
+    inp.value = '';
+    renderFolderPickerList();
+    toast('폴더가 만들어졌어요 📂');
+  }
+});
+
+document.getElementById('queue-toggle-btn')?.addEventListener('click', () => {
+  _queuePanelCollapsed = !_queuePanelCollapsed;
+  renderQueuePanel();
+});
+document.getElementById('queue-shuffle-btn')?.addEventListener('click', () => shuffleRoomQueue());
+document.getElementById('queue-clear-btn')?.addEventListener('click', async () => {
+  if (!isMeDJ()) return;
+  await fbClearRoomQueue();
+  toast('재생 큐를 비웠어요');
+});
+
+document.getElementById('save-current-btn')?.addEventListener('click', () => {
+  const cs = state.remoteCurrentSong;
+  if (!cs || !cs.id) return;
+  const thumb = cs.thumbnail || cs.thumb || '';
+  openFolderPicker({
+    id: cs.id,
+    title: cs.title,
+    channel: cs.channel || '',
+    thumb,
+    thumbnail: thumb,
+  }, '재생 중인 곡 저장', { fromNowPlaying: true });
+});
 
 // ── REACTIONS
 document.querySelectorAll('.reaction-btn').forEach(btn=>{
