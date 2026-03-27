@@ -3599,6 +3599,12 @@ function renderQueuePanel() {
 
 // ── SONG SEARCH
 let _searchDebounceTimer = null;
+const SEARCH_DEBOUNCE_MS = 700;
+const SEARCH_MIN_QUERY_LEN = 2;
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const SEARCH_CACHE_KEY = 'musicroom_yt_search_cache_v1';
+let _searchRequestSeq = 0;
+const _searchMemoryCache = new Map();
 /** ISO 8601 duration (e.g. PT4M13S) → m:ss or h:mm:ss */
 function formatYoutubeDuration(iso) {
   if (!iso || typeof iso !== 'string') return '';
@@ -3614,6 +3620,112 @@ function formatYoutubeDuration(iso) {
   if (hh > 0) return `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
   return `${mm}:${String(ss).padStart(2, '0')}`;
 }
+function normalizeSearchQuery(q) {
+  return String(q || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+function loadSearchCacheFromStorage() {
+  try {
+    const raw = localStorage.getItem(SEARCH_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+    const now = Date.now();
+    Object.entries(parsed).forEach(([key, value]) => {
+      if (!value || typeof value !== 'object') return;
+      if (typeof value.expiresAt !== 'number' || value.expiresAt < now) return;
+      if (!Array.isArray(value.items)) return;
+      _searchMemoryCache.set(key, value);
+    });
+  } catch (_) {}
+}
+function persistSearchCacheToStorage() {
+  try {
+    const now = Date.now();
+    const payload = {};
+    _searchMemoryCache.forEach((value, key) => {
+      if (!value || typeof value !== 'object') return;
+      if (typeof value.expiresAt !== 'number' || value.expiresAt < now) return;
+      payload[key] = value;
+    });
+    localStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify(payload));
+  } catch (_) {}
+}
+function getCachedSearchResult(normalizedQuery) {
+  const cached = _searchMemoryCache.get(normalizedQuery);
+  if (!cached) return null;
+  if (cached.expiresAt < Date.now()) {
+    _searchMemoryCache.delete(normalizedQuery);
+    persistSearchCacheToStorage();
+    return null;
+  }
+  return cached.items;
+}
+function setCachedSearchResult(normalizedQuery, items) {
+  _searchMemoryCache.set(normalizedQuery, {
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+    items: Array.isArray(items) ? items : []
+  });
+  persistSearchCacheToStorage();
+}
+function showSearchHint(resultsEl, msg) {
+  resultsEl.innerHTML = `<div class="search-empty">${escHtml(msg)}</div>`;
+}
+function renderSearchResults(resultsEl, items) {
+  resultsEl.innerHTML = '';
+  const dj = isMeDJ();
+  items.forEach(item => {
+    const vid = item.id;
+    const title = item.title || '';
+    const thumb = item.thumb || '';
+    const channel = item.channel || '';
+    const dur = item.duration || '';
+    const durHtml = dur ? `<span class="result-duration">${escHtml(dur)}</span>` : '';
+    const div = document.createElement('div');
+    div.className = 'search-result-item';
+    const songPayload = { id: vid, title, thumb, channel, thumbnail: thumb };
+    div.innerHTML = `
+      <div class="result-thumb-wrap">
+        <img class="result-thumb" src="${escHtml(thumb)}" alt="" loading="lazy">
+        ${durHtml}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="result-title">${escHtml(title)}</div>
+        <div class="result-channel">${escHtml(channel)}</div>
+      </div>
+      <div class="result-actions">
+        <button type="button" class="search-play-btn">▶ 재생</button>
+        <button type="button" class="search-queue-btn">＋ 큐</button>
+        <button type="button" class="search-save-btn">＋ 저장</button>
+      </div>`;
+    const playB = div.querySelector('.search-play-btn');
+    const queueB = div.querySelector('.search-queue-btn');
+    const saveB = div.querySelector('.search-save-btn');
+    playB.disabled = !dj;
+    playB.title = dj ? '지금 재생' : 'DJ만 재생 가능';
+    queueB.disabled = !dj;
+    queueB.title = dj ? '재생 큐에 추가' : 'DJ만 큐 추가 가능';
+    playB.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!dj) return;
+      djPlayNowWithQueue(songPayload, true);
+    });
+    queueB.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!dj) return;
+      const ok = await addSongToRoomQueue(songPayload);
+      if (!ok) return;
+      queueB.disabled = true;
+      queueB.textContent = '✅ 추가됨';
+      queueB.classList.add('added');
+    });
+    saveB.addEventListener('click', e => {
+      e.stopPropagation();
+      openFolderPicker(songPayload, '플레이리스트에 저장');
+    });
+    resultsEl.appendChild(div);
+  });
+}
+loadSearchCacheFromStorage();
 function openSearchModal() {
   document.getElementById('search-modal').classList.add('open');
 }
@@ -3631,28 +3743,53 @@ document.getElementById('search-input').addEventListener('input', () => {
     const qq = document.getElementById('search-input').value.trim();
     const resultsEl = document.getElementById('search-results');
     if (!qq) {
-      resultsEl.innerHTML = '<div class="search-empty">검색어를 입력하고 노래를 찾아보세요 🎵</div>';
+      showSearchHint(resultsEl, '검색어를 입력하고 노래를 찾아보세요 🎵');
+      return;
+    }
+    if (qq.length < SEARCH_MIN_QUERY_LEN) {
+      showSearchHint(resultsEl, `검색어 ${SEARCH_MIN_QUERY_LEN}자 이상 입력해주세요.`);
       return;
     }
     doSearch();
-  }, 500);
+  }, SEARCH_DEBOUNCE_MS);
 });
 
 async function doSearch() {
   const q = document.getElementById('search-input').value.trim();
   if (!q) return;
   const resultsEl = document.getElementById('search-results');
-  resultsEl.innerHTML='<div class="search-empty">🔍 검색 중...</div>';
+  if (q.length < SEARCH_MIN_QUERY_LEN) {
+    showSearchHint(resultsEl, `검색어 ${SEARCH_MIN_QUERY_LEN}자 이상 입력해주세요.`);
+    return;
+  }
+  const normalizedQuery = normalizeSearchQuery(q);
+  const cachedItems = getCachedSearchResult(normalizedQuery);
+  if (cachedItems && cachedItems.length) {
+    renderSearchResults(resultsEl, cachedItems);
+    return;
+  }
+  if (cachedItems && !cachedItems.length) {
+    showSearchHint(resultsEl, '검색 결과가 없어요 🎵');
+    return;
+  }
+  const requestSeq = ++_searchRequestSeq;
+  showSearchHint(resultsEl, '🔍 검색 중...');
   try {
-    const url=`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=8&key=${ytApiKey}`;
+    const url=`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=8&fields=items(id/videoId,snippet/title,snippet/channelTitle,snippet/thumbnails/default/url,snippet/thumbnails/medium/url),error/message&key=${ytApiKey}`;
     const data = await (await fetch(url)).json();
-    if (data.error){resultsEl.innerHTML=`<div class="search-empty">❌ 오류: ${data.error.message}</div>`;return;}
-    if (!data.items?.length){resultsEl.innerHTML='<div class="search-empty">검색 결과가 없어요 🎵</div>';return;}
+    if (requestSeq !== _searchRequestSeq) return;
+    if (data.error){showSearchHint(resultsEl, `❌ 오류: ${data.error.message}`);return;}
+    if (!data.items?.length){
+      setCachedSearchResult(normalizedQuery, []);
+      showSearchHint(resultsEl, '검색 결과가 없어요 🎵');
+      return;
+    }
     const ids = data.items.map(it => it.id?.videoId).filter(Boolean).join(',');
     const durationById = {};
     if (ids) {
-      const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(ids)}&key=${ytApiKey}`;
+      const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(ids)}&fields=items(id,contentDetails/duration),error/message&key=${ytApiKey}`;
       const vJson = await (await fetch(vUrl)).json();
+      if (requestSeq !== _searchRequestSeq) return;
       if (!vJson.error && vJson.items?.length) {
         vJson.items.forEach(v => {
           const d = v.contentDetails?.duration;
@@ -3660,60 +3797,19 @@ async function doSearch() {
         });
       }
     }
-    resultsEl.innerHTML = '';
-    const dj = isMeDJ();
-    data.items.forEach(item => {
+    const normalizedItems = data.items.map(item => {
       const vid = item.id.videoId;
       const title = item.snippet.title;
-      const thumb = item.snippet.thumbnails.medium?.url||item.snippet.thumbnails.default.url;
+      const thumb = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url || '';
       const channel = item.snippet.channelTitle;
-      const dur = durationById[vid] || '';
-      const durHtml = dur ? `<span class="result-duration">${escHtml(dur)}</span>` : '';
-      const div = document.createElement('div');
-      div.className = 'search-result-item';
-      const songPayload = { id: vid, title, thumb, channel, thumbnail: thumb };
-      div.innerHTML = `
-        <div class="result-thumb-wrap">
-          <img class="result-thumb" src="${escHtml(thumb)}" alt="" loading="lazy">
-          ${durHtml}
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div class="result-title">${escHtml(title)}</div>
-          <div class="result-channel">${escHtml(channel)}</div>
-        </div>
-        <div class="result-actions">
-          <button type="button" class="search-play-btn">▶ 재생</button>
-          <button type="button" class="search-queue-btn">＋ 큐</button>
-          <button type="button" class="search-save-btn">＋ 저장</button>
-        </div>`;
-      const playB = div.querySelector('.search-play-btn');
-      const queueB = div.querySelector('.search-queue-btn');
-      const saveB = div.querySelector('.search-save-btn');
-      playB.disabled = !dj;
-      playB.title = dj ? '지금 재생' : 'DJ만 재생 가능';
-      queueB.disabled = !dj;
-      queueB.title = dj ? '재생 큐에 추가' : 'DJ만 큐 추가 가능';
-      playB.addEventListener('click', e => {
-        e.stopPropagation();
-        if (!dj) return;
-        djPlayNowWithQueue(songPayload, true);
-      });
-      queueB.addEventListener('click', async e => {
-        e.stopPropagation();
-        if (!dj) return;
-        const ok = await addSongToRoomQueue(songPayload);
-        if (!ok) return;
-        queueB.disabled = true;
-        queueB.textContent = '✅ 추가됨';
-        queueB.classList.add('added');
-      });
-      saveB.addEventListener('click', e => {
-        e.stopPropagation();
-        openFolderPicker(songPayload, '플레이리스트에 저장');
-      });
-      resultsEl.appendChild(div);
-    });
-  } catch(e){resultsEl.innerHTML='<div class="search-empty">❌ 네트워크 오류</div>';}
+      return { id: vid, title, thumb, channel, duration: durationById[vid] || '' };
+    }).filter(it => it.id);
+    setCachedSearchResult(normalizedQuery, normalizedItems);
+    renderSearchResults(resultsEl, normalizedItems);
+  } catch(e){
+    if (requestSeq !== _searchRequestSeq) return;
+    showSearchHint(resultsEl, '❌ 네트워크 오류');
+  }
 }
 
 // ── PLAYER CONTROLS
