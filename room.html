@@ -522,6 +522,13 @@
   .tab-bar { display:flex;border-bottom:2px solid var(--border);flex-shrink:0; }
   .tab-btn { flex:1;background:none;border:none;color:var(--text-dim);padding:10px;font-family:var(--pixel);font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px; }
   .tab-btn.active { color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px; }
+  @keyframes chat-tab-ping {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(233, 69, 96, 0); color: var(--accent2); }
+    50% { box-shadow: 0 0 12px rgba(233, 69, 96, 0.5); color: var(--accent); }
+  }
+  .tab-btn#tab-chat.has-chat-ping:not(.active) {
+    animation: chat-tab-ping 1.2s ease-in-out infinite;
+  }
 
   /* CHAT */
   #panel-chat { flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0; }
@@ -1462,6 +1469,7 @@ const state = {
   rhythmOn: false,
   songQueue: [],
   queueIndex: 0,
+  rightPanelTab: 'chat',
 };
 
 let ytPlayer = null, ytReady = false;
@@ -1474,6 +1482,50 @@ function toast(msg) {
   document.getElementById('toast-container').appendChild(el);
   setTimeout(() => el.remove(), 3000);
 }
+
+const CHAT_TAB_BASE_TITLE = '🎵 뮤직룸';
+let chatTitleFlashTimer = null;
+
+function stopChatTabAttention() {
+  if (chatTitleFlashTimer) {
+    clearInterval(chatTitleFlashTimer);
+    chatTitleFlashTimer = null;
+  }
+  document.title = CHAT_TAB_BASE_TITLE;
+  document.getElementById('tab-chat')?.classList.remove('has-chat-ping');
+}
+
+function startChatTabAttention(newCount) {
+  stopChatTabAttention();
+  const n = Math.min(Math.max(1, newCount), 99);
+  const alt = n > 1 ? `💬 (${n}) 새 메시지 — 뮤직룸` : `💬 새 메시지 — 뮤직룸`;
+  let flip = false;
+  chatTitleFlashTimer = setInterval(() => {
+    document.title = flip ? CHAT_TAB_BASE_TITLE : alt;
+    flip = !flip;
+  }, 1200);
+  if (state.rightPanelTab !== 'chat') {
+    document.getElementById('tab-chat')?.classList.add('has-chat-ping');
+  }
+}
+
+function tryDesktopChatNotify(fromName, text) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const preview = (text || '').length > 100 ? text.slice(0, 100) + '…' : text;
+  try {
+    new Notification(fromName ? `💬 ${fromName}` : '💬 뮤직룸', {
+      body: preview || '새 메시지가 왔어요',
+      tag: 'musicroom-chat',
+      renotify: true,
+    });
+  } catch (e) {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.rightPanelTab === 'chat') {
+    stopChatTabAttention();
+  }
+});
 function timeStr() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -2239,6 +2291,8 @@ async function enterRoom() {
   });
 
   let chatPersistWatermark = getChatLogMaxTs(myRoomId);
+  let chatNotifyInitialized = false;
+  let chatNotifyWatermark = 0;
   loadPastLogs(myRoomId);
 
   // ── Firebase 리스너들
@@ -2283,7 +2337,29 @@ async function enterRoom() {
       container.scrollTop = container.scrollHeight;
       return;
     }
-    Object.values(snap.val()).sort((a,b)=>a.ts-b.ts).forEach(msg=>{
+    const list = Object.values(snap.val()).sort((a,b)=>a.ts-b.ts);
+    const maxTs = list.length ? list[list.length - 1].ts : 0;
+
+    if (!chatNotifyInitialized) {
+      chatNotifyWatermark = maxTs;
+      chatNotifyInitialized = true;
+    } else if (maxTs > chatNotifyWatermark) {
+      if (state.me) {
+        const newMsgs = list.filter(m => m.ts > chatNotifyWatermark);
+        const fromOthers = newMsgs.filter(m => !m.system && m.name !== state.me.name);
+        if (fromOthers.length) {
+          const wantsAttention = document.hidden || state.rightPanelTab !== 'chat';
+          if (wantsAttention) {
+            startChatTabAttention(fromOthers.length);
+            const last = fromOthers[fromOthers.length - 1];
+            tryDesktopChatNotify(last.name, last.text);
+          }
+        }
+      }
+      chatNotifyWatermark = maxTs;
+    }
+
+    list.forEach(msg=>{
       if (msg.ts > chatPersistWatermark) {
         if (msg.system) {
           appendChatLog(myRoomId, { ts: msg.ts, nick: '', msg: msg.text, type: 'system', timeLabel: '' });
@@ -3396,6 +3472,9 @@ function sendChat() {
   const input = document.getElementById('chat-input');
   const msg = input.value.trim();
   if (!msg || !state.me) return;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
   fbSendChat(msg);
   input.value = '';
   input.style.height = 'auto';
@@ -3425,6 +3504,8 @@ document.getElementById('chat-download-btn')?.addEventListener('click', () => {
 
 // ── TABS
 function switchTab(active) {
+  state.rightPanelTab = active;
+  if (active === 'chat') stopChatTabAttention();
   const tabs = ['chat','playlist','history'];
   tabs.forEach(t => {
     const btn = document.getElementById(`tab-${t}`);
