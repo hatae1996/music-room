@@ -189,18 +189,143 @@ const IDLE_MOTIONS = {
   look_left:  { frames: 2, flipX: [false, true], speed: 500 },
   look_right: { frames: 2, flipX: [true, false], speed: 500 },
   stretch:    { frames: 4, offsetY: [0, -1, -3, -1], speed: 350 },
+  float:      { frames: 4, offsetY: [0, -2, -3, -2], speed: 420 },
+  sway:       { frames: 4, offsetX: [0, -2, 2, 0], speed: 380 },
+  mech_pulse: { frames: 2, scaleY: [1.0, 0.92], speed: 160 },
+  hop:        { frames: 3, offsetY: [0, -4, 0], speed: 220 },
 };
 
 const CHAR_MOTION_WEIGHT = {
-  cat:   { bob: 3, nod: 2, look_left: 2, look_right: 2, tap: 1, stretch: 2 },
-  robot: { bob: 1, nod: 3, tap: 3, look_left: 1, look_right: 1, stretch: 1 },
-  ghost: { bob: 2, nod: 1, look_left: 3, look_right: 3, tap: 1, stretch: 1 },
-  dino:  { bob: 2, nod: 2, tap: 3, look_left: 1, look_right: 1, stretch: 3 },
-  mage:  { bob: 2, nod: 2, look_left: 2, look_right: 2, tap: 2, stretch: 2 },
-  frog:  { bob: 2, nod: 1, tap: 3, look_left: 2, look_right: 2, stretch: 2 },
-  alien: { bob: 3, nod: 3, tap: 1, look_left: 2, look_right: 2, stretch: 1 },
-  panda: { bob: 3, nod: 2, tap: 2, look_left: 2, look_right: 2, stretch: 1 },
+  cat:   { bob: 3, nod: 2, look_left: 2, look_right: 2, tap: 1, stretch: 2, sway: 2 },
+  robot: { bob: 1, nod: 3, tap: 2, look_left: 1, look_right: 1, stretch: 1, mech_pulse: 4 },
+  ghost: { bob: 1, nod: 1, look_left: 2, look_right: 2, tap: 1, stretch: 1, float: 5, sway: 2 },
+  dino:  { bob: 2, nod: 2, tap: 3, look_left: 1, look_right: 1, stretch: 3, hop: 2 },
+  mage:  { bob: 2, nod: 2, look_left: 2, look_right: 2, tap: 2, stretch: 2, sway: 1 },
+  frog:  { bob: 2, nod: 1, tap: 3, look_left: 2, look_right: 2, stretch: 2, hop: 3 },
+  alien: { bob: 3, nod: 3, tap: 1, look_left: 2, look_right: 2, stretch: 1, sway: 2 },
+  panda: { bob: 4, nod: 2, tap: 1, look_left: 2, look_right: 2, stretch: 1, sway: 1 },
 };
+
+// ── CHAR_PROFILE (아이들 리듬 + 이모지 리액션 오버라이드) — room.html 인라인과 동기화
+const CHAR_PROFILE = {
+  _default: {
+    persona: '',
+    idleDelayMul: 1,
+    idleSpeedMul: 1,
+    motionAdd: {},
+    emoji: {},
+  },
+  cat: {
+    persona: '호기심 많은 네코',
+    idleDelayMul: 1,
+    idleSpeedMul: 1,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'dance', ms: 650 }, '👍': { anim: 'jump-soft', ms: 450 }, '❤️': { anim: 'jump-soft', ms: 500 },
+      '🔥': { anim: 'dance', ms: 650 }, '⭐': { anim: 'jump', ms: 550 }, '❄️': { anim: 'shake', ms: 500 },
+      '💧': { anim: 'cry', ms: 750 }, '🎉': { anim: 'celebrate', ms: 600 }, '😂': { anim: 'jump', ms: 500 },
+    },
+  },
+  robot: {
+    persona: '리듬이 딱딱한 봇',
+    idleDelayMul: 0.92,
+    idleSpeedMul: 0.88,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'dance', ms: 700 }, '👍': { anim: 'jump-soft', ms: 400 }, '❤️': { anim: 'shake', ms: 550 },
+      '🔥': { anim: 'dance', ms: 700 }, '⭐': { anim: 'spin', ms: 450 }, '❄️': { anim: 'shake', ms: 500 },
+      '💧': { anim: 'shake', ms: 600 }, '🎉': { anim: 'jump-soft', ms: 500 }, '😂': { anim: 'shake', ms: 550 },
+    },
+  },
+  ghost: {
+    persona: '둥실 떠다니는 유령',
+    idleDelayMul: 1.12,
+    idleSpeedMul: 1.15,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'spin', ms: 700 }, '👍': { anim: 'celebrate', ms: 500 }, '❤️': { anim: 'celebrate', ms: 550 },
+      '🔥': { anim: 'shake', ms: 550 }, '⭐': { anim: 'spin', ms: 800 }, '❄️': { anim: 'shake', ms: 600 },
+      '💧': { anim: 'celebrate', ms: 550 }, '🎉': { anim: 'spin', ms: 650 }, '😂': { anim: 'wiggle', ms: 550 },
+    },
+  },
+  dino: {
+    persona: '힘 있는 덩치',
+    idleDelayMul: 1.05,
+    idleSpeedMul: 1.02,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'dance', ms: 700 }, '👍': { anim: 'jump', ms: 600 }, '❤️': { anim: 'celebrate', ms: 750 },
+      '🔥': { anim: 'celebrate', ms: 700 }, '⭐': { anim: 'jump-soft', ms: 500 }, '❄️': { anim: 'cry', ms: 800 },
+      '💧': { anim: 'cry', ms: 750 }, '🎉': { anim: 'celebrate', ms: 800 }, '😂': { anim: 'shake', ms: 600 },
+    },
+  },
+  mage: {
+    persona: '여유로운 마법사',
+    idleDelayMul: 1.02,
+    idleSpeedMul: 1.05,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'spin', ms: 700 }, '👍': { anim: 'jump-soft', ms: 500 }, '❤️': { anim: 'spin', ms: 850 },
+      '🔥': { anim: 'spin', ms: 650 }, '⭐': { anim: 'spin', ms: 900 }, '❄️': { anim: 'shake', ms: 550 },
+      '💧': { anim: 'cry', ms: 750 }, '🎉': { anim: 'celebrate', ms: 650 }, '😂': { anim: 'celebrate', ms: 550 },
+    },
+  },
+  frog: {
+    persona: '통통 튀는 개구리',
+    idleDelayMul: 0.88,
+    idleSpeedMul: 0.92,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'celebrate', ms: 480 }, '👍': { anim: 'jump', ms: 500 }, '❤️': { anim: 'jump', ms: 550 },
+      '🔥': { anim: 'jump', ms: 600 }, '⭐': { anim: 'jump', ms: 550 }, '❄️': { anim: 'cry', ms: 750 },
+      '💧': { anim: 'celebrate', ms: 600 }, '🎉': { anim: 'jump', ms: 600 }, '😂': { anim: 'jump', ms: 500 },
+    },
+  },
+  alien: {
+    persona: '이질적인 외계인',
+    idleDelayMul: 1,
+    idleSpeedMul: 1,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'wiggle', ms: 600 }, '👍': { anim: 'wiggle', ms: 500 }, '❤️': { anim: 'wiggle', ms: 550 },
+      '🔥': { anim: 'dance', ms: 650 }, '⭐': { anim: 'spin', ms: 600 }, '❄️': { anim: 'shake', ms: 550 },
+      '💧': { anim: 'wiggle', ms: 550 }, '🎉': { anim: 'wiggle', ms: 600 }, '😂': { anim: 'wiggle', ms: 600 },
+    },
+  },
+  panda: {
+    persona: '느긋한 판다',
+    idleDelayMul: 1.08,
+    idleSpeedMul: 1.06,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'celebrate', ms: 550 }, '👍': { anim: 'jump-soft', ms: 550 }, '❤️': { anim: 'celebrate', ms: 550 },
+      '🔥': { anim: 'shake', ms: 550 }, '⭐': { anim: 'celebrate', ms: 600 }, '❄️': { anim: 'shake', ms: 600 },
+      '💧': { anim: 'cry', ms: 800 }, '🎉': { anim: 'celebrate', ms: 500 }, '😂': { anim: 'shake', ms: 500 },
+    },
+  },
+};
+
+function mergeCharProfile(charId) {
+  const base = CHAR_PROFILE._default || {};
+  const p = CHAR_PROFILE[charId] || {};
+  return {
+    persona: p.persona != null ? p.persona : base.persona,
+    idleDelayMul: p.idleDelayMul != null ? p.idleDelayMul : base.idleDelayMul,
+    idleSpeedMul: p.idleSpeedMul != null ? p.idleSpeedMul : base.idleSpeedMul,
+    motionAdd: { ...(base.motionAdd || {}), ...(p.motionAdd || {}) },
+    emoji: { ...(base.emoji || {}), ...(p.emoji || {}) },
+  };
+}
+
+function mergedMotionWeights(charId) {
+  const base = CHAR_MOTION_WEIGHT[charId] || CHAR_MOTION_WEIGHT.cat;
+  const add = mergeCharProfile(charId).motionAdd;
+  const out = { ...base };
+  Object.keys(add).forEach(k => {
+    out[k] = (out[k] || 0) + add[k];
+  });
+  return out;
+}
 
 // ── drawSprite
 function drawSprite(canvasEl, charId, scale=3, colorId=null) {

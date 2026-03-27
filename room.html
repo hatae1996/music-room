@@ -814,13 +814,31 @@
   @keyframes animCelebrate { 0%{transform:scale(1)rotate(0)}20%{transform:scale(1.3)rotate(-15deg)}40%{transform:scale(1.3)rotate(15deg)}100%{transform:scale(1)rotate(0)} }
   @keyframes animCry { 0%,100%{transform:translateY(0)}50%{transform:translateY(5px)scale(0.92)} }
   @keyframes animSpin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
+  @keyframes animJumpSoft { 0%,100%{transform:translateY(0)}35%{transform:translateY(-10px)scale(1.06)}75%{transform:translateY(-2px)} }
+  @keyframes animJumpHeavy { 0%,100%{transform:translateY(0)}30%{transform:translateY(-10px)scale(1.12)}80%{transform:translateY(-1px)} }
+  @keyframes animWiggle { 0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)skewX(-4deg)}40%{transform:translateX(5px)skewX(4deg)}60%{transform:translateX(-4px)skewX(-3deg)}80%{transform:translateX(3px)skewX(2deg)} }
+  @keyframes animDanceTick { 0%,100%{transform:translateY(0)rotate(-6deg)}50%{transform:translateY(-3px)rotate(6deg)} }
   .seat.is-bobbing canvas.sprite, canvas.sprite.anim-dance { animation:animDance 0.45s ease-in-out infinite; }
   .dj-room.is-bobbing #dj-char-canvas { animation:animDance 0.45s ease-in-out infinite; }
   canvas.sprite.anim-jump { animation:animJump 0.5s ease-out; }
+  canvas.sprite.anim-jump-soft { animation:animJumpSoft 0.45s ease-out; }
   canvas.sprite.anim-shake { animation:animShake 0.5s ease-in-out; }
   canvas.sprite.anim-celebrate { animation:animCelebrate 0.6s ease-in-out; }
   canvas.sprite.anim-cry { animation:animCry 0.8s ease-in-out; }
   canvas.sprite.anim-spin { animation:animSpin 0.6s ease-in-out; }
+  canvas.sprite.anim-wiggle { animation:animWiggle 0.5s ease-in-out; }
+  canvas.sprite[data-char="robot"].anim-dance { animation:animDanceTick 0.38s ease-in-out infinite; }
+  .dj-room.is-bobbing #dj-char-canvas[data-char="robot"] { animation:animDanceTick 0.38s ease-in-out infinite; }
+  canvas.sprite[data-char="mage"].anim-spin { animation:animSpin 0.95s ease-in-out; }
+  #dj-char-canvas[data-char="mage"].anim-spin { animation:animSpin 0.95s ease-in-out; }
+  canvas.sprite[data-char="dino"].anim-jump { animation:animJumpHeavy 0.55s ease-out; }
+  #dj-char-canvas[data-char="dino"].anim-jump { animation:animJumpHeavy 0.55s ease-out; }
+  canvas.sprite[data-char="ghost"].anim-shake,
+  #dj-char-canvas[data-char="ghost"].anim-shake { animation:animShake 0.55s ease-in-out; }
+  canvas.sprite[data-char="ghost"].anim-celebrate,
+  #dj-char-canvas[data-char="ghost"].anim-celebrate { animation:animCelebrate 0.55s ease-in-out; }
+  canvas.sprite[data-char="panda"].anim-celebrate { animation:animCelebrate 0.45s ease-in-out; }
+  #dj-char-canvas[data-char="panda"].anim-celebrate { animation:animCelebrate 0.45s ease-in-out; }
 
   /* MOBILE */
   @media (max-width: 768px) {
@@ -1375,17 +1393,141 @@ const IDLE_MOTIONS = {
   look_left:  { frames: 2, flipX: [false, true], speed: 500 },
   look_right: { frames: 2, flipX: [true, false], speed: 500 },
   stretch:    { frames: 4, offsetY: [0, -1, -3, -1], speed: 350 },
+  float:      { frames: 4, offsetY: [0, -2, -3, -2], speed: 420 },
+  sway:       { frames: 4, offsetX: [0, -2, 2, 0], speed: 380 },
+  mech_pulse: { frames: 2, scaleY: [1.0, 0.92], speed: 160 },
+  hop:        { frames: 3, offsetY: [0, -4, 0], speed: 220 },
 };
 const CHAR_MOTION_WEIGHT = {
-  cat:   { bob: 3, nod: 2, look_left: 2, look_right: 2, tap: 1, stretch: 2 },
-  robot: { bob: 1, nod: 3, tap: 3, look_left: 1, look_right: 1, stretch: 1 },
-  ghost: { bob: 2, nod: 1, look_left: 3, look_right: 3, tap: 1, stretch: 1 },
-  dino:  { bob: 2, nod: 2, tap: 3, look_left: 1, look_right: 1, stretch: 3 },
-  mage:  { bob: 2, nod: 2, look_left: 2, look_right: 2, tap: 2, stretch: 2 },
-  frog:  { bob: 2, nod: 1, tap: 3, look_left: 2, look_right: 2, stretch: 2 },
-  alien: { bob: 3, nod: 3, tap: 1, look_left: 2, look_right: 2, stretch: 1 },
-  panda: { bob: 3, nod: 2, tap: 2, look_left: 2, look_right: 2, stretch: 1 },
+  cat:   { bob: 3, nod: 2, look_left: 2, look_right: 2, tap: 1, stretch: 2, sway: 2 },
+  robot: { bob: 1, nod: 3, tap: 2, look_left: 1, look_right: 1, stretch: 1, mech_pulse: 4 },
+  ghost: { bob: 1, nod: 1, look_left: 2, look_right: 2, tap: 1, stretch: 1, float: 5, sway: 2 },
+  dino:  { bob: 2, nod: 2, tap: 3, look_left: 1, look_right: 1, stretch: 3, hop: 2 },
+  mage:  { bob: 2, nod: 2, look_left: 2, look_right: 2, tap: 2, stretch: 2, sway: 1 },
+  frog:  { bob: 2, nod: 1, tap: 3, look_left: 2, look_right: 2, stretch: 2, hop: 3 },
+  alien: { bob: 3, nod: 3, tap: 1, look_left: 2, look_right: 2, stretch: 1, sway: 2 },
+  panda: { bob: 4, nod: 2, tap: 1, look_left: 2, look_right: 2, stretch: 1, sway: 1 },
 };
+
+const CHAR_PROFILE = {
+  _default: {
+    persona: '',
+    idleDelayMul: 1,
+    idleSpeedMul: 1,
+    motionAdd: {},
+    emoji: {},
+  },
+  cat: {
+    persona: '호기심 많은 네코',
+    idleDelayMul: 1,
+    idleSpeedMul: 1,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'dance', ms: 650 }, '👍': { anim: 'jump-soft', ms: 450 }, '❤️': { anim: 'jump-soft', ms: 500 },
+      '🔥': { anim: 'dance', ms: 650 }, '⭐': { anim: 'jump', ms: 550 }, '❄️': { anim: 'shake', ms: 500 },
+      '💧': { anim: 'cry', ms: 750 }, '🎉': { anim: 'celebrate', ms: 600 }, '😂': { anim: 'jump', ms: 500 },
+    },
+  },
+  robot: {
+    persona: '리듬이 딱딱한 봇',
+    idleDelayMul: 0.92,
+    idleSpeedMul: 0.88,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'dance', ms: 700 }, '👍': { anim: 'jump-soft', ms: 400 }, '❤️': { anim: 'shake', ms: 550 },
+      '🔥': { anim: 'dance', ms: 700 }, '⭐': { anim: 'spin', ms: 450 }, '❄️': { anim: 'shake', ms: 500 },
+      '💧': { anim: 'shake', ms: 600 }, '🎉': { anim: 'jump-soft', ms: 500 }, '😂': { anim: 'shake', ms: 550 },
+    },
+  },
+  ghost: {
+    persona: '둥실 떠다니는 유령',
+    idleDelayMul: 1.12,
+    idleSpeedMul: 1.15,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'spin', ms: 700 }, '👍': { anim: 'celebrate', ms: 500 }, '❤️': { anim: 'celebrate', ms: 550 },
+      '🔥': { anim: 'shake', ms: 550 }, '⭐': { anim: 'spin', ms: 800 }, '❄️': { anim: 'shake', ms: 600 },
+      '💧': { anim: 'celebrate', ms: 550 }, '🎉': { anim: 'spin', ms: 650 }, '😂': { anim: 'wiggle', ms: 550 },
+    },
+  },
+  dino: {
+    persona: '힘 있는 덩치',
+    idleDelayMul: 1.05,
+    idleSpeedMul: 1.02,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'dance', ms: 700 }, '👍': { anim: 'jump', ms: 600 }, '❤️': { anim: 'celebrate', ms: 750 },
+      '🔥': { anim: 'celebrate', ms: 700 }, '⭐': { anim: 'jump-soft', ms: 500 }, '❄️': { anim: 'cry', ms: 800 },
+      '💧': { anim: 'cry', ms: 750 }, '🎉': { anim: 'celebrate', ms: 800 }, '😂': { anim: 'shake', ms: 600 },
+    },
+  },
+  mage: {
+    persona: '여유로운 마법사',
+    idleDelayMul: 1.02,
+    idleSpeedMul: 1.05,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'spin', ms: 700 }, '👍': { anim: 'jump-soft', ms: 500 }, '❤️': { anim: 'spin', ms: 850 },
+      '🔥': { anim: 'spin', ms: 650 }, '⭐': { anim: 'spin', ms: 900 }, '❄️': { anim: 'shake', ms: 550 },
+      '💧': { anim: 'cry', ms: 750 }, '🎉': { anim: 'celebrate', ms: 650 }, '😂': { anim: 'celebrate', ms: 550 },
+    },
+  },
+  frog: {
+    persona: '통통 튀는 개구리',
+    idleDelayMul: 0.88,
+    idleSpeedMul: 0.92,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'celebrate', ms: 480 }, '👍': { anim: 'jump', ms: 500 }, '❤️': { anim: 'jump', ms: 550 },
+      '🔥': { anim: 'jump', ms: 600 }, '⭐': { anim: 'jump', ms: 550 }, '❄️': { anim: 'cry', ms: 750 },
+      '💧': { anim: 'celebrate', ms: 600 }, '🎉': { anim: 'jump', ms: 600 }, '😂': { anim: 'jump', ms: 500 },
+    },
+  },
+  alien: {
+    persona: '이질적인 외계인',
+    idleDelayMul: 1,
+    idleSpeedMul: 1,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'wiggle', ms: 600 }, '👍': { anim: 'wiggle', ms: 500 }, '❤️': { anim: 'wiggle', ms: 550 },
+      '🔥': { anim: 'dance', ms: 650 }, '⭐': { anim: 'spin', ms: 600 }, '❄️': { anim: 'shake', ms: 550 },
+      '💧': { anim: 'wiggle', ms: 550 }, '🎉': { anim: 'wiggle', ms: 600 }, '😂': { anim: 'wiggle', ms: 600 },
+    },
+  },
+  panda: {
+    persona: '느긋한 판다',
+    idleDelayMul: 1.08,
+    idleSpeedMul: 1.06,
+    motionAdd: {},
+    emoji: {
+      '🎵': { anim: 'celebrate', ms: 550 }, '👍': { anim: 'jump-soft', ms: 550 }, '❤️': { anim: 'celebrate', ms: 550 },
+      '🔥': { anim: 'shake', ms: 550 }, '⭐': { anim: 'celebrate', ms: 600 }, '❄️': { anim: 'shake', ms: 600 },
+      '💧': { anim: 'cry', ms: 800 }, '🎉': { anim: 'celebrate', ms: 500 }, '😂': { anim: 'shake', ms: 500 },
+    },
+  },
+};
+
+function mergeCharProfile(charId) {
+  const base = CHAR_PROFILE._default || {};
+  const p = CHAR_PROFILE[charId] || {};
+  return {
+    persona: p.persona != null ? p.persona : base.persona,
+    idleDelayMul: p.idleDelayMul != null ? p.idleDelayMul : base.idleDelayMul,
+    idleSpeedMul: p.idleSpeedMul != null ? p.idleSpeedMul : base.idleSpeedMul,
+    motionAdd: { ...(base.motionAdd || {}), ...(p.motionAdd || {}) },
+    emoji: { ...(base.emoji || {}), ...(p.emoji || {}) },
+  };
+}
+
+function mergedMotionWeights(charId) {
+  const baseW = CHAR_MOTION_WEIGHT[charId] || CHAR_MOTION_WEIGHT.cat;
+  const add = mergeCharProfile(charId).motionAdd;
+  const out = { ...baseW };
+  Object.keys(add).forEach(k => {
+    out[k] = (out[k] || 0) + add[k];
+  });
+  return out;
+}
 
 // ── selectedChar/Color (index.html과 room.html 공통 상태)
 let selectedChar = CHARS[0].id;
@@ -1539,10 +1681,38 @@ function generateRoomId() {
 
 // ── EMOJI ANIMATIONS
 const EMOJI_ANIM = {'👍':'jump','❤️':'shake','🔥':'dance','⭐':'spin','❄️':'shake','💧':'cry','🎉':'celebrate','😂':'jump','🎵':'dance'};
+const REACTION_ANIM_CLASSES = ['anim-dance','anim-jump','anim-jump-soft','anim-shake','anim-celebrate','anim-cry','anim-spin','anim-wiggle'];
 function seatIndexOfDJ() {
   const name = state.dj && state.dj.currentDJ;
   if (!name) return -1;
   return state.seats.findIndex(s => s && s.name === name);
+}
+function resolveReactionAnim(charId, emoji) {
+  const prof = mergeCharProfile(charId || 'cat');
+  const o = prof.emoji && prof.emoji[emoji];
+  const key = (o && o.anim) || EMOJI_ANIM[emoji] || 'jump';
+  const ms = (o && o.ms != null) ? o.ms : 700;
+  return { cls: 'anim-' + key, ms };
+}
+function playCharAnimForEmoji(seatIdx, emoji) {
+  const seat = state.seats[seatIdx];
+  const charId = (seat && seat.charId) || 'cat';
+  const { cls, ms } = resolveReactionAnim(charId, emoji);
+  playCharAnim(seatIdx, cls, ms);
+  if (cls === 'anim-dance') {
+    setTimeout(() => {
+      const djIdx = seatIndexOfDJ();
+      const cv = (seatIdx >= 0 && seatIdx === djIdx)
+        ? document.getElementById('dj-char-canvas')
+        : document.getElementById(`sprite-${seatIdx}`);
+      if (!cv || !cv.classList.contains('anim-dance')) return;
+      const seatEl = document.querySelector(`.seat[data-seat="${seatIdx}"]`);
+      const booth = document.getElementById('dj-room');
+      const rhythmOn = (seatIdx === djIdx && booth && booth.classList.contains('is-bobbing'))
+        || (seatEl && seatEl.classList.contains('is-bobbing'));
+      if (!rhythmOn) cv.classList.remove('anim-dance');
+    }, ms);
+  }
 }
 function playCharAnim(seatIdx, animClass, ms=700) {
   const djIdx = seatIndexOfDJ();
@@ -1550,17 +1720,17 @@ function playCharAnim(seatIdx, animClass, ms=700) {
     ? document.getElementById('dj-char-canvas')
     : document.getElementById(`sprite-${seatIdx}`);
   if (!cv) return;
-  ['anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin'].forEach(c=>cv.classList.remove(c));
+  REACTION_ANIM_CLASSES.forEach(c => cv.classList.remove(c));
   void cv.offsetWidth;
   cv.classList.add(animClass);
-  if (animClass !== 'anim-dance') setTimeout(()=>cv.classList.remove(animClass), ms);
+  if (animClass !== 'anim-dance') setTimeout(() => cv.classList.remove(animClass), ms);
 }
 function stopCharAnim(seatIdx) {
   const djIdx = seatIndexOfDJ();
   const ids = [document.getElementById(`sprite-${seatIdx}`)];
   if (seatIdx === djIdx) ids.push(document.getElementById('dj-char-canvas'));
   ids.forEach(cv => {
-    if (cv) ['anim-dance','anim-jump','anim-shake','anim-celebrate','anim-cry','anim-spin'].forEach(c=>cv.classList.remove(c));
+    if (cv) REACTION_ANIM_CLASSES.forEach(c => cv.classList.remove(c));
   });
 }
 
@@ -1578,8 +1748,9 @@ function isSeatDJ(seatIndex) {
 }
 
 function pickIdleMotionForChar(charId) {
-  const weights = CHAR_MOTION_WEIGHT[charId] || CHAR_MOTION_WEIGHT.cat;
-  const keys = Object.keys(weights);
+  const weights = mergedMotionWeights(charId);
+  const keys = Object.keys(weights).filter(k => weights[k] > 0 && IDLE_MOTIONS[k]);
+  if (!keys.length) return 'bob';
   let total = 0;
   keys.forEach(k => { total += weights[k]; });
   let r = Math.random() * total;
@@ -1592,7 +1763,11 @@ function pickIdleMotionForChar(charId) {
 
 function scheduleIdleMotion(seatIndex) {
   if (_idleTimers[seatIndex]) clearTimeout(_idleTimers[seatIndex]);
-  const delay = 3000 + Math.random() * 5000;
+  const seat = state.seats[seatIndex];
+  const charId = (seat && seat.charId) || 'cat';
+  const prof = mergeCharProfile(charId);
+  const mul = prof.idleDelayMul != null ? prof.idleDelayMul : 1;
+  const delay = (3000 + Math.random() * 5000) * mul;
   _idleTimers[seatIndex] = setTimeout(() => {
     _idleTimers[seatIndex] = null;
     if (state.playing && state.seats[seatIndex] && !isSeatDJ(seatIndex)) {
@@ -1609,9 +1784,13 @@ function triggerIdleMotion(seatIndex) {
   const seatEl = document.querySelector(`.seat[data-seat="${seatIndex}"]`);
   if (seatEl && seatEl.classList.contains('is-bobbing')) return;
   if (!document.getElementById(`sprite-${seatIndex}`)) return;
-  const motionName = pickIdleMotionForChar(seat.charId || 'cat');
+  const cid = seat.charId || 'cat';
+  const motionName = pickIdleMotionForChar(cid);
   const motion = IDLE_MOTIONS[motionName];
   if (!motion) return;
+
+  const prof = mergeCharProfile(cid);
+  const speedMul = prof.idleSpeedMul != null ? prof.idleSpeedMul : 1;
 
   _idleMotionActive[seatIndex] = true;
   let frame = 0;
@@ -1632,6 +1811,10 @@ function triggerIdleMotion(seatIndex) {
       const oy = motion.offsetY[Math.min(frame, motion.offsetY.length - 1)] * 3;
       parts.push(`translateY(${oy}px)`);
     }
+    if (motion.offsetX) {
+      const ox = motion.offsetX[Math.min(frame, motion.offsetX.length - 1)] * 3;
+      parts.push(`translateX(${ox}px)`);
+    }
     if (motion.scaleY) {
       const sy = motion.scaleY[Math.min(frame, motion.scaleY.length - 1)];
       parts.push(`scaleY(${sy})`);
@@ -1643,7 +1826,7 @@ function triggerIdleMotion(seatIndex) {
     cv.style.transform = parts.length ? parts.join(' ') : '';
     cv.style.transformOrigin = 'bottom center';
     frame++;
-    setTimeout(runFrame, motion.speed);
+    setTimeout(runFrame, motion.speed * speedMul);
   };
   runFrame();
 }
@@ -1733,6 +1916,7 @@ function renderDJRoom() {
     if (nickEl) nickEl.textContent = '';
     const cv = document.getElementById('dj-char-canvas');
     if (cv) {
+      cv.removeAttribute('data-char');
       try {
         const ctx = cv.getContext('2d');
         if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
@@ -1749,7 +1933,10 @@ function renderDJRoom() {
   const nick = document.getElementById('dj-nick');
   if (nick) nick.textContent = djSeat.name;
   const cv = document.getElementById('dj-char-canvas');
-  if (cv) requestAnimationFrame(() => drawSprite(cv, djSeat.charId, 4, djSeat.colorId));
+  if (cv) {
+    cv.dataset.char = djSeat.charId || 'cat';
+    requestAnimationFrame(() => drawSprite(cv, djSeat.charId, 4, djSeat.colorId));
+  }
   const ctrl = document.getElementById('dj-controls');
   if (ctrl) ctrl.style.display = isMeDJ() ? 'flex' : 'none';
 
@@ -2455,7 +2642,7 @@ async function enterRoom() {
     spawnEmojiLocally(latest.emoji);
     if (latest.senderName) {
       const senderIdx = state.seats.findIndex(s=>s&&s.name===latest.senderName);
-      if (senderIdx>=0) playCharAnim(senderIdx,'anim-'+(EMOJI_ANIM[latest.emoji]||'jump'),700);
+      if (senderIdx>=0) playCharAnimForEmoji(senderIdx, latest.emoji);
     }
   });
 
@@ -2886,7 +3073,7 @@ function launchEmoji(emoji) {
   spawnEmojiLocally(emoji);
   if (state.me) {
     const myIdx = state.seats.findIndex(s=>s&&s.name===state.me.name);
-    if (myIdx>=0) playCharAnim(myIdx,'anim-'+(EMOJI_ANIM[emoji]||'jump'),700);
+    if (myIdx>=0) playCharAnimForEmoji(myIdx, emoji);
   }
   if (state.roomId&&window._fbReady) {
     const {db,ref,push} = window._fb;
