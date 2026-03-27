@@ -2927,6 +2927,21 @@ async function playFolderAll(folderName) {
   }
 }
 
+async function addSongToRoomQueue(songFlat) {
+  if (!isMeDJ() || !state.roomId || !window._fbReady) return false;
+  const song = normalizeQueueSong(songFlat);
+  if (!song) return false;
+  const { db, ref, get, update } = window._fb;
+  const roomRef = ref(db, `rooms/${state.roomId}`);
+  const snap = await get(roomRef);
+  const data = snap.val() || {};
+  const q = Array.isArray(data.songQueue) ? [...data.songQueue] : [];
+  q.push(song);
+  const idx = typeof data.queueIndex === 'number' ? data.queueIndex : 0;
+  await update(roomRef, { songQueue: q, queueIndex: idx });
+  return true;
+}
+
 async function advancePlayQueueIfAny() {
   if (!isMeDJ() || !state.roomId || !window._fbReady) return;
   const { db, ref, get, update } = window._fb;
@@ -3098,6 +3113,18 @@ function renderPlaylistPanel() {
         </div>
         <div class="pl-actions"></div>`;
       const moveDiv = row.querySelector('.pl-actions');
+      if (canDJ) {
+        const addQ = document.createElement('button');
+        addQ.type = 'button';
+        addQ.className = 'pl-btn add';
+        addQ.textContent = '＋큐';
+        addQ.title = 'DJ 재생 큐에 추가';
+        addQ.addEventListener('click', async () => {
+          const ok = await addSongToRoomQueue(s);
+          if (ok) toast('재생 큐에 추가했어요');
+        });
+        moveDiv.appendChild(addQ);
+      }
       const up = document.createElement('button');
       up.type = 'button';
       up.className = 'pl-btn';
@@ -3222,16 +3249,29 @@ async function doSearch() {
         </div>
         <div class="result-actions">
           <button type="button" class="search-play-btn">▶ 재생</button>
+          <button type="button" class="search-queue-btn">＋ 큐</button>
           <button type="button" class="search-save-btn">＋ 저장</button>
         </div>`;
       const playB = div.querySelector('.search-play-btn');
+      const queueB = div.querySelector('.search-queue-btn');
       const saveB = div.querySelector('.search-save-btn');
       playB.disabled = !dj;
       playB.title = dj ? '지금 재생' : 'DJ만 재생 가능';
+      queueB.disabled = !dj;
+      queueB.title = dj ? '재생 큐에 추가' : 'DJ만 큐 추가 가능';
       playB.addEventListener('click', e => {
         e.stopPropagation();
         if (!dj) return;
         djPlayNowWithQueue(songPayload, true);
+      });
+      queueB.addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!dj) return;
+        const ok = await addSongToRoomQueue(songPayload);
+        if (!ok) return;
+        queueB.disabled = true;
+        queueB.textContent = '✅ 추가됨';
+        queueB.classList.add('added');
       });
       saveB.addEventListener('click', e => {
         e.stopPropagation();
