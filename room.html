@@ -3334,7 +3334,7 @@ function renderPlaylistPanel() {
   names.forEach(folderName => {
     const songs = data[folderName] || [];
     const fold = document.createElement('div');
-    fold.className = 'pl-folder open';
+    fold.className = 'pl-folder';
     const header = document.createElement('div');
     header.className = 'pl-folder-header';
     header.innerHTML = `<span class="pl-folder-icon">📁</span>
