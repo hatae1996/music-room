@@ -3790,19 +3790,15 @@ document.getElementById('search-input').addEventListener('keydown',e=>{
 });
 document.getElementById('search-input').addEventListener('input', () => {
   clearTimeout(_searchDebounceTimer);
-  _searchDebounceTimer = setTimeout(() => {
-    const qq = document.getElementById('search-input').value.trim();
-    const resultsEl = document.getElementById('search-results');
-    if (!qq) {
-      showSearchHint(resultsEl, '검색어를 입력하고 노래를 찾아보세요 🎵');
-      return;
-    }
-    if (qq.length < SEARCH_MIN_QUERY_LEN) {
-      showSearchHint(resultsEl, `검색어 ${SEARCH_MIN_QUERY_LEN}자 이상 입력해주세요.`);
-      return;
-    }
-    doSearch();
-  }, SEARCH_DEBOUNCE_MS);
+  const qq = document.getElementById('search-input').value.trim();
+  const resultsEl = document.getElementById('search-results');
+  if (!qq) {
+    showSearchHint(resultsEl, '검색어를 입력하고 노래를 찾아보세요 🎵');
+    return;
+  }
+  if (qq.length < SEARCH_MIN_QUERY_LEN) {
+    showSearchHint(resultsEl, `검색어 ${SEARCH_MIN_QUERY_LEN}자 이상 입력해주세요.`);
+  }
 });
 
 async function doSearch() {
@@ -3835,7 +3831,7 @@ async function doSearch() {
   _searchAbortController = abortController;
   showSearchHint(resultsEl, '🔍 검색 중...');
   try {
-    const url=`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=8&fields=items(id/videoId,snippet/title,snippet/channelTitle,snippet/thumbnails/default/url,snippet/thumbnails/medium/url),error/message&key=${ytApiKey}`;
+    const url=`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=video&maxResults=8&fields=items(id/videoId,snippet(title,channelTitle,thumbnails(default(url),medium(url)))),error(message)&key=${ytApiKey}`;
     const data = await (await fetch(url, { signal: abortController.signal })).json();
     if (requestSeq !== _searchRequestSeq) return;
     if (data.error){
@@ -3855,7 +3851,7 @@ async function doSearch() {
     const ids = data.items.map(it => it.id?.videoId).filter(Boolean).join(',');
     const durationById = {};
     if (ids) {
-      const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(ids)}&fields=items(id,contentDetails/duration),error/message&key=${ytApiKey}`;
+      const vUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${encodeURIComponent(ids)}&fields=items(id,contentDetails(duration)),error(message)&key=${ytApiKey}`;
       const vJson = await (await fetch(vUrl, { signal: abortController.signal })).json();
       if (requestSeq !== _searchRequestSeq) return;
       if (vJson.error && isQuotaExceededError(vJson.error)) {
