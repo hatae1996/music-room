@@ -3353,17 +3353,14 @@ async function advancePlayQueueIfAny() {
   const snap = await get(roomRef);
   const data = snap.val() || {};
   const q = Array.isArray(data.songQueue) ? data.songQueue : [];
-  let idx = typeof data.queueIndex === 'number' ? data.queueIndex : 0;
-  if (idx < q.length - 1) {
-    const nextIdx = idx + 1;
-    const song = q[nextIdx];
-    const djName = state.dj && state.dj.currentDJ;
-    if (!song || !song.id || !djName) return;
-    await update(roomRef, { queueIndex: nextIdx });
-    _doPlay(songToPlayShape(song), djName);
-  } else {
-    await update(roomRef, { songQueue: [], queueIndex: 0 });
-  }
+  if (!q.length) return;
+  const idx = typeof data.queueIndex === 'number' ? data.queueIndex : 0;
+  const nextIdx = (idx + 1) % q.length;
+  const song = q[nextIdx];
+  const djName = state.dj && state.dj.currentDJ;
+  if (!song || !song.id || !djName) return;
+  await update(roomRef, { queueIndex: nextIdx });
+  _doPlay(songToPlayShape(song), djName);
 }
 
 async function skipToNextSong() {
@@ -3378,11 +3375,7 @@ async function skipToNextSong() {
     toast('재생 큐가 비어있어요');
     return;
   }
-  if (idx >= q.length - 1) {
-    toast('다음 곡이 없어요');
-    return;
-  }
-  const nextIdx = idx + 1;
+  const nextIdx = (idx + 1) % q.length;
   const song = q[nextIdx];
   const djName = state.dj && state.dj.currentDJ;
   if (!song || !song.id || !djName) {
