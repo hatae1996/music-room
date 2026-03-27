@@ -1036,8 +1036,9 @@
     #panel-chat {
       min-height: 0;
       flex: 1;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      /* 히스토리 영역을 최대한 확보하고, 알림/입력은 필요한 만큼만 사용 */
+      grid-template-rows: minmax(0, 1fr) auto auto;
       overflow: hidden;
     }
     #panel-playlist {
@@ -1059,14 +1060,17 @@
       flex: 1!important;
       overflow-y: auto!important;
       min-height: 0!important;
+      padding-top: 8px!important;
+      padding-bottom: 8px!important;
       -webkit-overflow-scrolling: touch;
     }
-    .chat-notify-row { flex-shrink: 0!important; padding: 5px 8px!important; align-items: center!important; }
+    .chat-notify-row { flex-shrink: 0!important; padding: 4px 8px!important; align-items: center!important; }
     /* 한 줄로 줄여 메시지 리스트에 세로 공간 확보 (행 title 속성·토글은 유지) */
     .chat-notify-hint { display: none!important; }
     .chat-notify-label-wrap { flex-direction: row!important; align-items: center!important; gap: 8px!important; }
     .chat-notify-title { line-height: 1.2!important; }
-    .chat-input-area { flex-shrink:0!important; }
+    .chat-input-area { flex-shrink:0!important; padding: 7px 8px!important; gap: 6px!important; }
+    .chat-dl-btn { width: 34px!important; min-width: 34px!important; padding: 5px 3px!important; font-size: 16px!important; }
     .chat-input-area textarea,
     .chat-input-area .pixel-input { font-size:14px!important; }
 
