@@ -164,38 +164,49 @@
   }
   @keyframes glow { 0%,100%{box-shadow:0 0 12px rgba(233,69,96,0.3)}50%{box-shadow:0 0 20px rgba(233,69,96,0.6)} }
 
-  /* ROOM STAGE — 5칸 (좌석 4 + 중앙 DJ 부스) */
+  /* ROOM STAGE — 2×2 캐릭터 칸 + 가운데 겹침 DJ룸 (와이어프레임과 동일) */
   .room-stage {
     flex: 1;
     display: grid;
-    grid-template-columns: 1fr 1.6fr 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 12px;
+    gap: 10px;
     position: relative;
-    overflow: hidden;
-    min-height: 0;
-    padding: 8px;
+    overflow: visible;
+    min-height: 260px;
+    padding: 10px;
+    align-content: stretch;
   }
-  .seat[data-seat="0"] { grid-column: 1; grid-row: 1; }
-  .seat[data-seat="1"] { grid-column: 3; grid-row: 1; }
-  .seat[data-seat="2"] { grid-column: 1; grid-row: 2; }
-  .seat[data-seat="3"] { grid-column: 3; grid-row: 2; }
+  .seat[data-seat="0"] { grid-column: 1; grid-row: 1; z-index: 1; }
+  .seat[data-seat="1"] { grid-column: 2; grid-row: 1; z-index: 1; }
+  .seat[data-seat="2"] { grid-column: 1; grid-row: 2; z-index: 1; }
+  .seat[data-seat="3"] { grid-column: 2; grid-row: 2; z-index: 1; }
 
   .dj-room {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    border: 2px solid var(--border);
-    border-radius: 8px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: clamp(188px, 44%, 290px);
+    max-width: calc(100% - 20px);
+    max-height: min(88%, 400px);
+    z-index: 4;
+    border: 3px solid var(--accent3);
+    border-radius: 10px;
     background: linear-gradient(180deg, var(--surface2) 0%, var(--surface) 100%);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.4),
+      0 12px 40px rgba(0,0,0,0.45),
+      0 0 24px rgba(168,85,247,0.15);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 12px;
-    gap: 8px;
+    padding: 10px;
+    gap: 6px;
     min-height: 0;
-    position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     transition: box-shadow 0.3s, border-color 0.3s;
   }
   .dj-room.dj-booth-glow {
@@ -743,24 +754,30 @@
     .room-layout { display:flex!important; flex-direction:column!important; height:auto!important; }
     .stage-area { flex-shrink:0!important; height:auto!important; }
 
-    /* 스테이지 (DJ 상단 + 좌석 2×2) */
+    /* 스테이지 — 데스크톱과 동일: 2×2 + 중앙 겹침 DJ룸 */
     .room-stage {
       grid-template-columns: 1fr 1fr !important;
-      grid-template-rows: auto auto auto !important;
-      height: auto !important;
-      min-height: 420px !important;
+      grid-template-rows: 1fr 1fr !important;
+      min-height: 300px !important;
+      height: 360px !important;
       flex: none !important;
       overflow: visible !important;
     }
     .dj-room {
-      grid-column: 1 / span 2 !important;
-      grid-row: 1 !important;
-      min-height: 200px !important;
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: min(68%, 232px) !important;
+      max-width: calc(100% - 16px) !important;
+      max-height: 86% !important;
+      min-height: unset !important;
+      z-index: 4 !important;
     }
-    .seat[data-seat="0"] { grid-column: 1 !important; grid-row: 2 !important; }
-    .seat[data-seat="1"] { grid-column: 2 !important; grid-row: 2 !important; }
-    .seat[data-seat="2"] { grid-column: 1 !important; grid-row: 3 !important; }
-    .seat[data-seat="3"] { grid-column: 2 !important; grid-row: 3 !important; }
+    .seat[data-seat="0"] { grid-column: 1 !important; grid-row: 1 !important; z-index: 1 !important; }
+    .seat[data-seat="1"] { grid-column: 2 !important; grid-row: 1 !important; z-index: 1 !important; }
+    .seat[data-seat="2"] { grid-column: 1 !important; grid-row: 2 !important; z-index: 1 !important; }
+    .seat[data-seat="3"] { grid-column: 2 !important; grid-row: 2 !important; z-index: 1 !important; }
     .seat { padding:6px 4px!important; gap:3px!important; }
     .seat canvas.sprite { transform:scale(0.7); transform-origin:top center; }
     .center-keyword { width:110px; }
