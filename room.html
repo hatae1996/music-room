@@ -1429,6 +1429,23 @@ function renderDJRoom() {
   if (!djName || !djSeat) {
     if (emptyEl) emptyEl.style.display = 'flex';
     if (activeEl) activeEl.style.display = 'none';
+    const thumbEl = document.getElementById('song-thumb');
+    const titleEl = document.getElementById('song-title');
+    const chEl = document.getElementById('song-channel');
+    if (thumbEl) { thumbEl.src = ''; thumbEl.style.display = 'none'; }
+    if (titleEl) titleEl.textContent = '-';
+    if (chEl) chEl.textContent = '-';
+    const nickEl = document.getElementById('dj-nick');
+    if (nickEl) nickEl.textContent = '';
+    const cv = document.getElementById('dj-char-canvas');
+    if (cv) {
+      try {
+        const ctx = cv.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
+      } catch (e) {}
+    }
+    const ctrl = document.getElementById('dj-controls');
+    if (ctrl) ctrl.style.display = 'none';
     return;
   }
   if (emptyEl) emptyEl.style.display = 'none';
@@ -1634,16 +1651,48 @@ async function applyDJRole() {
 
 async function leaveDJBooth() {
   if (!isMeDJ() || !state.roomId || !window._fbReady) return;
-  if (!confirm('DJ를 그만둘까요? 다음 대기자가 부스로 올라옵니다.')) return;
-  const { db, ref, get, update } = window._fb;
+  const { db, ref, get, set } = window._fb;
   const djRef = ref(db, `rooms/${state.roomId}/dj`);
   const snap = await get(djRef);
   const d = snap.val() || {};
   const queue = Array.isArray(d.djQueue) ? [...d.djQueue] : [];
   const nextDJ = queue.length > 0 ? queue[0] : null;
   const newQueue = queue.slice(1);
-  await update(djRef, { currentDJ: nextDJ, djQueue: newQueue });
+  const boothWillBeEmpty = !nextDJ;
+  const msg = boothWillBeEmpty
+    ? 'DJ를 그만둘까요? 대기자가 없으면 부스가 비고 재생도 멈춥니다.'
+    : 'DJ를 그만둘까요? 다음 대기자가 부스로 올라옵니다.';
+  if (!confirm(msg)) return;
+
+  await set(djRef, { currentDJ: nextDJ, djQueue: newQueue });
+  state.dj = { currentDJ: nextDJ, djQueue: newQueue };
+
+  if (boothWillBeEmpty) {
+    await set(ref(db, `rooms/${state.roomId}/currentSong`), null);
+    resetLocalPlaybackQuiet();
+  }
+
+  renderSeats();
+  renderDJRoom();
+  updateDJIndicator();
   toast('DJ를 그만뒀어요');
+}
+
+function resetLocalPlaybackQuiet() {
+  state.currentSong = null;
+  state.playing = false;
+  state.remoteCurrentSong = null;
+  applyCurrentSongFromFirebase._lastSig = '';
+  document.getElementById('player-bar')?.classList.add('hidden');
+  const btn = document.getElementById('play-pause-btn');
+  if (btn) btn.textContent = '▶';
+  try {
+    if (ytPlayer && ytReady && typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
+  } catch (e) {}
+  if ('mediaSession' in navigator) {
+    try { navigator.mediaSession.playbackState = 'none'; } catch (e) {}
+  }
+  renderDJRoom();
 }
 async function getServerTimeMs() {
   if (!window._fbReady) return Date.now();
@@ -1937,9 +1986,7 @@ async function enterRoom() {
 
   onValue(ref(db,`rooms/${myRoomId}/currentSong`), snap=>{
     if (!snap.exists()) {
-      state.remoteCurrentSong = null;
-      applyCurrentSongFromFirebase._lastSig = '';
-      renderDJRoom();
+      resetLocalPlaybackQuiet();
       return;
     }
     const cs = snap.val();
@@ -2472,15 +2519,11 @@ if (djLeaveBtn) djLeaveBtn.addEventListener('click', () => leaveDJBooth());
 document.getElementById('stop-btn').addEventListener('click',()=>{
   if (!ytPlayer||!ytReady) return;
   if (!isMeDJ()) { toast('DJ만 조작할 수 있어요'); return; }
-  ytPlayer.stopVideo();
-  document.getElementById('player-bar').classList.add('hidden');
-  state.currentSong=null; state.playing=false;
-  state.remoteCurrentSong = null;
   if (window._fbReady) {
     const {db, ref, set} = window._fb;
     set(ref(db, `rooms/${state.roomId}/currentSong`), null);
   }
-  renderDJRoom();
+  resetLocalPlaybackQuiet();
   fbSendSystemChat(state.roomId,'재생이 멈췄습니다.');
 });
 document.getElementById('mute-btn').addEventListener('click',()=>{
