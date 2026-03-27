@@ -1241,7 +1241,7 @@
 </div>
 
 <!-- YouTube Player -->
-<div id="yt-player-container" style="position:fixed;bottom:0;left:-320px;width:320px;height:180px;overflow:hidden;z-index:1;opacity:0;pointer-events:none;">
+<div id="yt-player-container" style="position:fixed;right:0;bottom:0;width:1px;height:1px;overflow:hidden;z-index:1;opacity:0.01;pointer-events:none;">
   <div id="yt-player"></div>
 </div>
 
@@ -1730,6 +1730,7 @@ const state = {
 
 let ytPlayer = null, ytReady = false;
 let isMuted = localStorage.getItem('musicroom_unmuted') !== 'true';
+const IS_ANDROID = /Android/i.test(navigator.userAgent || '');
 
 const LS_CHAT_POPUP_NOTIFY = 'musicroom_chat_popup_notify';
 function isChatPopupNotifyOn() {
@@ -2956,10 +2957,27 @@ function stopAudioKeepAlive() {
   if (_keepAliveTimer) { clearInterval(_keepAliveTimer); _keepAliveTimer = null; }
 }
 
+function ensureAndroidBackgroundPlayback() {
+  if (!IS_ANDROID || !state.playing || !ytReady || !ytPlayer) return;
+  try {
+    // 안드로이드 앱 전환 시 일시정지되는 케이스를 줄이기 위한 보조 재생 트리거
+    if (ytPlayer.getPlayerState && ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+      ytPlayer.playVideo();
+    }
+    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
+    startAudioKeepAlive();
+  } catch (e) {}
+}
+
 // visibilitychange: 복귀 시 재생 재시작 + wakeLock 재취득
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    ensureAndroidBackgroundPlayback();
+    return;
+  }
   if (document.visibilityState === 'visible') {
     if (state.playing) requestWakeLock();
+    ensureAndroidBackgroundPlayback();
     if (ytReady && ytPlayer && state.remoteCurrentSong && state.remoteCurrentSong.pausePositionSec == null) {
       getServerTimeMs().then(serverNow => {
         const cs = state.remoteCurrentSong;
@@ -2989,6 +3007,8 @@ document.addEventListener('visibilitychange', () => {
     if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume();
   }
 });
+window.addEventListener('blur', ensureAndroidBackgroundPlayback);
+window.addEventListener('pagehide', ensureAndroidBackgroundPlayback);
 
 // ── EMOJI
 function spawnEmojiLocally(emoji) {
