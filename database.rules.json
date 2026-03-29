@@ -8,8 +8,8 @@
         ".write": true
       }
     },
-    "userPlaylists": {
-      "$userKey": {
+    "global": {
+      "sharedPlaylist": {
         ".read": true,
         ".write": true
       }
