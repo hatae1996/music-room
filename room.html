@@ -2548,6 +2548,15 @@ function fbAddHistory(entry) {
 }
 // ── ENTER ROOM
 async function enterRoom() {
+  let migratePrevRoomId = null;
+  try {
+    const rawSess = localStorage.getItem('musicroom_session');
+    if (rawSess) {
+      const s = JSON.parse(rawSess);
+      if (s && s.roomId && s.roomId !== myRoomId) migratePrevRoomId = s.roomId;
+    }
+  } catch (e) {}
+
   const {db,ref,set,get,update,onValue,push} = window._fb;
   const roomRef = ref(db,`rooms/${myRoomId}`);
   const snap = await get(roomRef);
@@ -2799,12 +2808,22 @@ async function enterRoom() {
     }
   });
 
-  onValue(ref(db, 'global/sharedPlaylist'), snap => {
-    state.sharedPlaylist = normalizePlaylistMap(snap.exists() ? snap.val() : null);
-    const fp = document.getElementById('folder-picker');
-    if (fp && fp.classList.contains('open')) renderFolderPickerList();
-    if (state.rightPanelTab === 'playlist') renderPlaylistPanel();
-  });
+  onValue(
+    ref(db, 'global/sharedPlaylist'),
+    snap => {
+      state.sharedPlaylist = normalizePlaylistMap(snap.exists() ? snap.val() : null);
+      const fp = document.getElementById('folder-picker');
+      if (fp && fp.classList.contains('open')) renderFolderPickerList();
+      if (state.rightPanelTab === 'playlist') renderPlaylistPanel();
+    },
+    err => {
+      console.error('global/sharedPlaylist', err);
+      const code = err && err.code;
+      if (code === 'PERMISSION_DENIED') {
+        toast('DB 규칙에 global/sharedPlaylist 를 추가·배포했는지 확인해 주세요');
+      }
+    }
+  );
 
   // 리듬
   onValue(ref(db,`rooms/${myRoomId}/rhythm`), snap=>{
@@ -2835,7 +2854,7 @@ async function enterRoom() {
     fbSendSystemChat(myRoomId, `${myName}님이 입장했습니다 🎉`);
   }
 
-  maybeMigrateLocalPlaylistToShared().catch(() => {});
+  maybeMigrateLocalPlaylistToShared(migratePrevRoomId).catch(() => {});
 }
 
 // ── PLAY DJ SONG
@@ -3364,60 +3383,77 @@ async function sharedPlaylistTransaction(mutateFn) {
   }
 }
 
-async function maybeMigrateLocalPlaylistToShared() {
+function playlistRefreshUIAfterMigrate() {
+  const fp = document.getElementById('folder-picker');
+  if (fp && fp.classList.contains('open')) renderFolderPickerList();
+  if (state.rightPanelTab === 'playlist') renderPlaylistPanel();
+}
+
+async function mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, sourceMap) {
+  if (isPlaylistMapEmpty(sourceMap)) return false;
+  const txResult = await runTransaction(pathRef, (current) => {
+    const ex = normalizePlaylistMap(playlistTxCurrentAsObject(current));
+    if (!isPlaylistMapEmpty(ex)) {
+      return current !== null && current !== undefined && typeof current === 'object' && !Array.isArray(current)
+        ? current
+        : {};
+    }
+    return playlistMapDenormalizeForFirebase(clonePlaylistMap(sourceMap));
+  });
+  if (txResult.committed) {
+    const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
+    state.sharedPlaylist = normalizePlaylistMap(v);
+    playlistRefreshUIAfterMigrate();
+  }
+  return txResult.committed;
+}
+
+async function maybeMigrateLocalPlaylistToShared(prevRoomId) {
   if (!window._fbReady || !window._fb.runTransaction) return;
-  const key = 'mr_global_sharedpl_migrated';
+  const key = 'mr_global_sharedpl_migrated_v2';
   if (sessionStorage.getItem(key)) return;
   const { db, ref, get, runTransaction } = window._fb;
   const pathRef = ref(db, 'global/sharedPlaylist');
+  const markDone = () => sessionStorage.setItem(key, '1');
   try {
     const snap = await get(pathRef);
     const existing = normalizePlaylistMap(snap.exists() ? snap.val() : null);
     if (!isPlaylistMapEmpty(existing)) {
-      sessionStorage.setItem(key, '1');
+      markDone();
       return;
     }
     const legacy = loadLegacyLocalPlaylists(myName);
     if (!isPlaylistMapEmpty(legacy)) {
-      const txResult = await runTransaction(pathRef, (current) => {
-        const ex = normalizePlaylistMap(playlistTxCurrentAsObject(current));
-        if (!isPlaylistMapEmpty(ex)) {
-          return current !== null && current !== undefined && typeof current === 'object' && !Array.isArray(current)
-            ? current
-            : {};
-        }
-        return playlistMapDenormalizeForFirebase(clonePlaylistMap(legacy));
-      });
-      if (txResult.committed) {
-        const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
-        state.sharedPlaylist = normalizePlaylistMap(v);
-      }
-      sessionStorage.setItem(key, '1');
+      await mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, legacy);
+      markDone();
       return;
+    }
+    if (prevRoomId) {
+      const prevSnap = await get(ref(db, `rooms/${prevRoomId}/sharedPlaylist`));
+      const fromPrev = normalizePlaylistMap(prevSnap.exists() ? prevSnap.val() : null);
+      if (!isPlaylistMapEmpty(fromPrev)) {
+        await mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, fromPrev);
+        markDone();
+        return;
+      }
     }
     if (state.roomId) {
       const roomPlSnap = await get(ref(db, `rooms/${state.roomId}/sharedPlaylist`));
       const fromRoom = normalizePlaylistMap(roomPlSnap.exists() ? roomPlSnap.val() : null);
       if (!isPlaylistMapEmpty(fromRoom)) {
-        const txResult = await runTransaction(pathRef, (current) => {
-          const ex = normalizePlaylistMap(playlistTxCurrentAsObject(current));
-          if (!isPlaylistMapEmpty(ex)) {
-            return current !== null && current !== undefined && typeof current === 'object' && !Array.isArray(current)
-              ? current
-              : {};
-          }
-          return playlistMapDenormalizeForFirebase(clonePlaylistMap(fromRoom));
-        });
-        if (txResult.committed) {
-          const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
-          state.sharedPlaylist = normalizePlaylistMap(v);
-        }
+        await mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, fromRoom);
+        markDone();
+        return;
       }
     }
-    sessionStorage.setItem(key, '1');
+    markDone();
   } catch (e) {
     console.error(e);
-    sessionStorage.setItem(key, '1');
+    if (e && e.code === 'PERMISSION_DENIED') {
+      toast('플레이리스트: DB 읽기 거부됨 — Realtime Database 규칙에 global/sharedPlaylist 배포 필요');
+      return;
+    }
+    markDone();
   }
 }
 
