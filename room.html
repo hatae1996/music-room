@@ -1303,6 +1303,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+window.__MR_DATABASE_URL = firebaseConfig.databaseURL || '';
 window._fb = { db, ref, set, get, update, onValue, push, serverTimestamp, runTransaction };
 window._fbReady = true;
 window.dispatchEvent(new Event('firebase-ready'));
@@ -3401,6 +3402,53 @@ function playlistRefreshUIAfterMigrate() {
   if (state.rightPanelTab === 'playlist') renderPlaylistPanel();
 }
 
+/** 예전 구조: 플레이리스트가 rooms/*/sharedPlaylist 에만 있고 global 이 비어 있을 때 — 전체 방 shallow + 방별 sharedPlaylist 만 가져와 병합 */
+async function mergeAllRoomsSharedPlaylistsIntoGlobalViaRest(pathRef, runTransaction) {
+  const base = String(window.__MR_DATABASE_URL || '').replace(/\/$/, '');
+  if (!base) return false;
+  try {
+    const shallowRes = await fetch(`${base}/rooms.json?shallow=true`);
+    if (!shallowRes.ok) return false;
+    const keysObj = await shallowRes.json();
+    if (!keysObj || typeof keysObj !== 'object') return false;
+    const roomIds = Object.keys(keysObj);
+    const merged = {};
+    const BATCH = 8;
+    for (let i = 0; i < roomIds.length; i += BATCH) {
+      const chunk = roomIds.slice(i, i + BATCH);
+      const results = await Promise.all(
+        chunk.map(async (rid) => {
+          try {
+            const r = await fetch(`${base}/rooms/${encodeURIComponent(rid)}/sharedPlaylist.json`);
+            if (!r.ok) return null;
+            return r.json();
+          } catch (e) {
+            return null;
+          }
+        })
+      );
+      for (const raw of results) {
+        if (!raw || typeof raw !== 'object') continue;
+        const norm = normalizePlaylistMap(raw);
+        for (const fk of Object.keys(norm)) {
+          if (!merged[fk]) merged[fk] = [];
+          const idSet = new Set(merged[fk].map((s) => s.id));
+          for (const s of norm[fk]) {
+            if (s && s.id && !idSet.has(s.id)) {
+              merged[fk].push(s);
+              idSet.add(s.id);
+            }
+          }
+        }
+      }
+    }
+    return mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, merged);
+  } catch (e) {
+    console.warn('REST room playlist merge', e);
+    return false;
+  }
+}
+
 async function mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, sourceMap) {
   if (isPlaylistMapEmpty(sourceMap)) return false;
   const txResult = await runTransaction(pathRef, (current) => {
@@ -3422,7 +3470,7 @@ async function mergePlaylistMapIntoGlobalIfEmpty(pathRef, runTransaction, source
 
 async function maybeMigrateLocalPlaylistToShared(prevRoomId) {
   if (!window._fbReady || !window._fb.runTransaction) return;
-  const key = 'mr_global_sharedpl_migrated_v2';
+  const key = 'mr_global_sharedpl_migrated_v3';
   if (sessionStorage.getItem(key)) return;
   const { db, ref, get, runTransaction } = window._fb;
   const pathRef = ref(db, 'global/sharedPlaylist');
@@ -3457,6 +3505,10 @@ async function maybeMigrateLocalPlaylistToShared(prevRoomId) {
         markDone();
         return;
       }
+    }
+    const okBulk = await mergeAllRoomsSharedPlaylistsIntoGlobalViaRest(pathRef, runTransaction);
+    if (okBulk) {
+      toast('예전 방에 있던 플레이리스트를 전역 목록으로 모았어요');
     }
     markDone();
   } catch (e) {
