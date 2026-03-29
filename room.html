@@ -3290,17 +3290,29 @@ function normalizeQueueSong(s) {
   return { id: s.id, title: s.title || '', channel: s.channel || '', thumbnail };
 }
 
+/** RTDB는 배열을 자주 { "0": song, "1": song } 형태로 돌려줌 — 빈 폴더는 "" 또는 생략 */
+function firebaseFolderSongsToArray(v) {
+  if (v == null || v === '') return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'object') {
+    const keys = Object.keys(v);
+    const numericKeys = keys.filter((x) => /^\d+$/.test(x));
+    if (numericKeys.length > 0) {
+      return numericKeys.sort((a, b) => Number(a) - Number(b)).map((i) => v[i]);
+    }
+    return Object.values(v);
+  }
+  return [];
+}
+
 function normalizePlaylistMap(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   for (const k of Object.keys(raw)) {
     if (typeof k !== 'string' || !k.trim()) continue;
     const v = raw[k];
-    if (!Array.isArray(v)) {
-      out[k] = [];
-      continue;
-    }
-    out[k] = v.map(s => normalizeQueueSong(s)).filter(Boolean);
+    const arr = firebaseFolderSongsToArray(v);
+    out[k] = arr.map((s) => normalizeQueueSong(s)).filter(Boolean);
   }
   return out;
 }
