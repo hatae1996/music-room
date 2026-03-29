@@ -3417,7 +3417,7 @@ function playlistRefreshUIAfterMigrate() {
   if (state.rightPanelTab === 'playlist') renderPlaylistPanel();
 }
 
-/** 예전 구조: 플레이리스트가 rooms/*/sharedPlaylist 에만 있고 global 이 비어 있을 때 — 전체 방 shallow + 방별 sharedPlaylist 만 가져와 병합 */
+// 예전 구조: 플레이리스트가 rooms/{방ID}/sharedPlaylist 에만 있고 global 이 비었을 때, shallow 로 방 목록을 받아 병합
 async function mergeAllRoomsSharedPlaylistsIntoGlobalViaRest(pathRef, runTransaction) {
   const base = String(window.__MR_DATABASE_URL || '').replace(/\/$/, '');
   if (!base) return false;
