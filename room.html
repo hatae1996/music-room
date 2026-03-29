@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>🎵 뮤직룸</title>
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -26,6 +26,9 @@
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  button, .ctrl-btn, .pick-song-btn, .char-option, .color-option {
+    touch-action: manipulation;
+  }
 
   body {
     background: var(--bg);
@@ -498,6 +501,7 @@
   .right-panel {
     display:flex;flex-direction:column;background:var(--surface);
     border-left:2px solid var(--border);overflow:hidden;
+    min-height:0;
   }
 
   /* KEYWORDS */
@@ -659,8 +663,17 @@
     flex:1; display:none; flex-direction:column; overflow:hidden; min-height:0;
   }
   .playlist-toolbar {
-    display:flex; gap:6px; padding:8px 10px; border-bottom:1px solid var(--border); flex-shrink:0;
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:8px 10px; border-bottom:1px solid var(--border); flex-shrink:0;
   }
+  .pl-sort-wrap {
+    display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-left:auto;
+  }
+  .pl-sort-btn {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text-dim);
+    padding:5px 8px; font-family:var(--pixel); font-size:6px; cursor:pointer; white-space:nowrap;
+  }
+  .pl-sort-btn:hover { border-color:var(--purple); color:var(--text); }
+  .pl-sort-btn.active { border-color:var(--purple); color:var(--accent); }
   .pl-search-input {
     flex:1; background:var(--bg); border:2px solid var(--border); color:var(--text);
     padding:7px 10px; font-family:var(--body); font-size:13px; outline:none;
@@ -718,29 +731,29 @@
   .pl-folder-songs {
     display:none; flex-direction:column;
     border-top:1px solid var(--border);
+    max-height:min(42vh, 300px);
+    overflow-y:auto;
+    overflow-x:hidden;
+    min-height:0;
+    -webkit-overflow-scrolling:touch;
   }
   .pl-folder.open .pl-folder-songs { display:flex; }
 
   /* 곡 아이템 */
   .pl-item {
-    display:flex; align-items:center; gap:8px;
-    padding:7px 10px 7px 20px; border-bottom:1px solid rgba(42,42,74,0.5);
+    display:flex; align-items:center; gap:6px;
+    padding:6px 8px 6px 14px; border-bottom:1px solid rgba(42,42,74,0.5);
     transition:background 0.15s;
   }
   .pl-item:last-child { border-bottom:none; }
   .pl-item:hover { background:rgba(168,85,247,0.05); }
-  .pl-thumb {
-    width:46px; height:34px; object-fit:cover;
-    border:1px solid var(--border); flex-shrink:0;
+  .pl-title-line {
+    flex:1; min-width:0;
+    font-size:12px; font-weight:600; color:var(--text);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    line-height:1.35;
   }
-  .pl-info { flex:1; min-width:0; }
-  .pl-title {
-    font-size:12px; font-weight:700; color:var(--text);
-    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-    margin-bottom:2px; line-height:1.4;
-  }
-  .pl-channel { font-size:10px; color:var(--text-dim); }
-  .pl-actions { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+  .pl-actions { display:flex; flex-direction:row; flex-wrap:wrap; gap:3px; flex-shrink:0; max-width:min(200px, 48%); justify-content:flex-end; }
   .pl-btn {
     background:transparent; border:1px solid; padding:3px 6px;
     font-family:var(--pixel); font-size:6px; cursor:pointer; white-space:nowrap; line-height:1.5;
@@ -1077,6 +1090,14 @@
 
     /* 플레이리스트 바디 스크롤 */
     .playlist-body { -webkit-overflow-scrolling: touch; }
+    .pl-sort-wrap {
+      margin-left: 0;
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+    .pl-folder-songs {
+      max-height: min(38vh, 260px);
+    }
   }
 
   canvas.sprite { image-rendering:pixelated; }
@@ -1214,6 +1235,11 @@
       <div id="panel-playlist">
         <div class="playlist-toolbar">
           <button type="button" class="pl-search-btn" id="pl-new-folder-btn">＋ 폴더</button>
+          <div class="pl-sort-wrap" role="group" aria-label="곡 정렬">
+            <button type="button" class="pl-sort-btn active" data-sort="titleAsc" id="pl-sort-title-asc">가나다↑</button>
+            <button type="button" class="pl-sort-btn" data-sort="titleDesc" id="pl-sort-title-desc">가나다↓</button>
+            <button type="button" class="pl-sort-btn" data-sort="manual" id="pl-sort-manual">담은순</button>
+          </div>
         </div>
         <div class="playlist-body" id="playlist-body-root"></div>
       </div>
@@ -1264,7 +1290,7 @@
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, update, onValue, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, get, update, onValue, push, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBH__D8eAxk2acFYRv9hJXABHMddBovKIw",
@@ -1277,7 +1303,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-window._fb = { db, ref, set, get, update, onValue, push, serverTimestamp };
+window._fb = { db, ref, set, get, update, onValue, push, serverTimestamp, runTransaction };
 window._fbReady = true;
 window.dispatchEvent(new Event('firebase-ready'));
 </script>
@@ -1726,6 +1752,8 @@ const state = {
   songQueue: [],
   queueIndex: 0,
   rightPanelTab: 'chat',
+  sharedPlaylist: {},
+  playlistSortMode: 'titleAsc',
 };
 
 let ytPlayer = null, ytReady = false;
@@ -2767,6 +2795,13 @@ async function enterRoom() {
     }
   });
 
+  onValue(ref(db, `rooms/${myRoomId}/sharedPlaylist`), snap => {
+    state.sharedPlaylist = normalizePlaylistMap(snap.exists() ? snap.val() : null);
+    const fp = document.getElementById('folder-picker');
+    if (fp && fp.classList.contains('open')) renderFolderPickerList();
+    if (state.rightPanelTab === 'playlist') renderPlaylistPanel();
+  });
+
   // 리듬
   onValue(ref(db,`rooms/${myRoomId}/rhythm`), snap=>{
     const rhythmData = snap.val()||{};
@@ -2793,6 +2828,8 @@ async function enterRoom() {
   });
 
   fbSendSystemChat(myRoomId,`${myName}님이 입장했습니다 🎉`);
+
+  maybeMigrateLocalPlaylistToShared().catch(() => {});
 }
 
 // ── PLAY DJ SONG
@@ -3221,82 +3258,210 @@ function launchEmoji(emoji) {
   }
 }
 
-// ── PLAYLIST (localStorage musicroom_playlists_[닉네임])
-function playlistsStorageKey(nick) {
-  return 'musicroom_playlists_' + String(nick || '').replace(/[.#$\[\]]/g, '_');
-}
-function loadPlaylists(nick) {
-  try {
-    const raw = localStorage.getItem(playlistsStorageKey(nick));
-    if (!raw) return {};
-    const o = JSON.parse(raw);
-    return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
-  } catch (e) { return {}; }
-}
-function savePlaylists(nick, data) {
-  localStorage.setItem(playlistsStorageKey(nick), JSON.stringify(data));
-}
-function createFolder(nick, folderName) {
-  const name = (folderName || '').trim();
-  if (!name) return false;
-  const data = loadPlaylists(nick);
-  if (data[name]) { toast('같은 이름의 폴더가 있어요'); return false; }
-  data[name] = [];
-  savePlaylists(nick, data);
-  return true;
-}
-function deleteFolder(nick, folderName) {
-  const data = loadPlaylists(nick);
-  delete data[folderName];
-  savePlaylists(nick, data);
-}
-function renameFolder(nick, oldName, newName) {
-  const nn = (newName || '').trim();
-  if (!nn || nn === oldName) return false;
-  const data = loadPlaylists(nick);
-  if (!data[oldName]) return false;
-  if (data[nn]) { toast('이미 있는 폴더 이름이에요'); return false; }
-  data[nn] = data[oldName];
-  delete data[oldName];
-  savePlaylists(nick, data);
-  return true;
-}
-function addSong(nick, folderName, song) {
-  const data = loadPlaylists(nick);
-  if (!data[folderName]) data[folderName] = [];
-  const entry = {
-    id: song.id,
-    title: song.title || '',
-    channel: song.channel || '',
-    thumbnail: song.thumbnail || song.thumb || ''
-  };
-  if (data[folderName].some(s => s.id === entry.id)) {
-    toast('이미 폴더에 있는 곡이에요');
-    return false;
-  }
-  data[folderName].push(entry);
-  savePlaylists(nick, data);
-  return true;
-}
-function removeSong(nick, folderName, songId) {
-  const data = loadPlaylists(nick);
-  if (!data[folderName]) return;
-  data[folderName] = data[folderName].filter(s => s.id !== songId);
-  savePlaylists(nick, data);
-}
-function moveSong(nick, folderName, fromIdx, toIdx) {
-  const data = loadPlaylists(nick);
-  const arr = data[folderName];
-  if (!arr || fromIdx < 0 || fromIdx >= arr.length || toIdx < 0 || toIdx >= arr.length) return;
-  const [item] = arr.splice(fromIdx, 1);
-  arr.splice(toIdx, 0, item);
-  savePlaylists(nick, data);
-}
-
+// ── PLAYLIST (Firebase rooms/*/sharedPlaylist — 방마다 전원 공유)
 function normalizeQueueSong(s) {
   if (!s || !s.id) return null;
   const thumbnail = s.thumbnail || s.thumb || '';
   return { id: s.id, title: s.title || '', channel: s.channel || '', thumbnail };
+}
+
+function normalizePlaylistMap(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const k of Object.keys(raw)) {
+    if (typeof k !== 'string' || !k.trim()) continue;
+    const v = raw[k];
+    if (!Array.isArray(v)) {
+      out[k] = [];
+      continue;
+    }
+    out[k] = v.map(s => normalizeQueueSong(s)).filter(Boolean);
+  }
+  return out;
+}
+
+function isPlaylistMapEmpty(map) {
+  return !map || typeof map !== 'object' || Object.keys(map).length === 0;
+}
+
+function clonePlaylistMap(raw) {
+  const n = normalizePlaylistMap(raw);
+  const o = {};
+  for (const k of Object.keys(n)) {
+    o[k] = n[k].map(s => ({ ...s }));
+  }
+  return o;
+}
+
+function loadLegacyLocalPlaylists(nick) {
+  try {
+    const key = 'musicroom_playlists_' + String(nick || '').replace(/[.#$\[\]]/g, '_');
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    const o = JSON.parse(raw);
+    return normalizePlaylistMap(o);
+  } catch (e) {
+    return {};
+  }
+}
+
+async function sharedPlaylistTransaction(mutateFn) {
+  if (!state.roomId || !window._fbReady || !window._fb.runTransaction) {
+    toast('연결 준비 중이에요');
+    return false;
+  }
+  const { db, ref, runTransaction } = window._fb;
+  const pathRef = ref(db, `rooms/${state.roomId}/sharedPlaylist`);
+  try {
+    const result = await runTransaction(pathRef, (current) => {
+      const raw = current.exists() ? current.val() : {};
+      const data = clonePlaylistMap(raw);
+      const ok = mutateFn(data);
+      if (ok === false) return undefined;
+      return data;
+    });
+    return result.committed;
+  } catch (e) {
+    console.error(e);
+    toast('플레이리스트 저장에 실패했어요');
+    return false;
+  }
+}
+
+async function maybeMigrateLocalPlaylistToShared() {
+  if (!state.roomId || !window._fbReady || !window._fb.runTransaction) return;
+  const key = 'mr_sharedpl_migrated_' + state.roomId;
+  if (sessionStorage.getItem(key)) return;
+  const { db, ref, get, runTransaction } = window._fb;
+  const pathRef = ref(db, `rooms/${state.roomId}/sharedPlaylist`);
+  try {
+    const snap = await get(pathRef);
+    const existing = normalizePlaylistMap(snap.exists() ? snap.val() : null);
+    if (!isPlaylistMapEmpty(existing)) {
+      sessionStorage.setItem(key, '1');
+      return;
+    }
+    const legacy = loadLegacyLocalPlaylists(myName);
+    if (isPlaylistMapEmpty(legacy)) {
+      sessionStorage.setItem(key, '1');
+      return;
+    }
+    await runTransaction(pathRef, (current) => {
+      const ex = normalizePlaylistMap(current.exists() ? current.val() : null);
+      if (!isPlaylistMapEmpty(ex)) return ex;
+      return legacy;
+    });
+    sessionStorage.setItem(key, '1');
+  } catch (e) {
+    console.error(e);
+    sessionStorage.setItem(key, '1');
+  }
+}
+
+function loadPlaylists(_nick) {
+  return clonePlaylistMap(state.sharedPlaylist);
+}
+
+async function createFolder(_nick, folderName) {
+  const name = (folderName || '').trim();
+  if (!name) return false;
+  return sharedPlaylistTransaction((data) => {
+    if (data[name]) {
+      toast('같은 이름의 폴더가 있어요');
+      return false;
+    }
+    data[name] = [];
+    return true;
+  });
+}
+
+async function deleteFolder(_nick, folderName) {
+  return sharedPlaylistTransaction((data) => {
+    delete data[folderName];
+    return true;
+  });
+}
+
+async function renameFolder(_nick, oldName, newName) {
+  const nn = (newName || '').trim();
+  if (!nn || nn === oldName) return false;
+  return sharedPlaylistTransaction((data) => {
+    if (!data[oldName]) return false;
+    if (data[nn]) {
+      toast('이미 있는 폴더 이름이에요');
+      return false;
+    }
+    data[nn] = data[oldName];
+    delete data[oldName];
+    return true;
+  });
+}
+
+async function addSong(_nick, folderName, song) {
+  const entry = normalizeQueueSong(song);
+  if (!entry) return false;
+  let added = false;
+  await sharedPlaylistTransaction((data) => {
+    if (!data[folderName]) data[folderName] = [];
+    if (data[folderName].some(s => s.id === entry.id)) {
+      toast('이미 폴더에 있는 곡이에요');
+      return false;
+    }
+    data[folderName].push({
+      id: entry.id,
+      title: entry.title || '',
+      channel: entry.channel || '',
+      thumbnail: entry.thumbnail || ''
+    });
+    added = true;
+    return true;
+  });
+  return added;
+}
+
+async function removeSong(_nick, folderName, songId) {
+  return sharedPlaylistTransaction((data) => {
+    if (!data[folderName]) return true;
+    data[folderName] = data[folderName].filter(s => s.id !== songId);
+    return true;
+  });
+}
+
+async function moveSong(_nick, folderName, fromIdx, toIdx) {
+  return sharedPlaylistTransaction((data) => {
+    const arr = data[folderName];
+    if (!arr || fromIdx < 0 || fromIdx >= arr.length || toIdx < 0 || toIdx >= arr.length) return false;
+    const [item] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, item);
+    return true;
+  });
+}
+
+async function transferSongBetweenFolders(fromFolder, storageIdx, toFolder, asCopy) {
+  return sharedPlaylistTransaction((data) => {
+    const from = data[fromFolder];
+    if (!from || storageIdx < 0 || storageIdx >= from.length) return false;
+    const item = from[storageIdx];
+    if (!item) return false;
+    if (!data[toFolder]) data[toFolder] = [];
+    if (data[toFolder].some(s => s.id === item.id)) {
+      toast('대상 폴더에 같은 영상이 있어요');
+      return false;
+    }
+    data[toFolder].push({ ...item });
+    if (!asCopy) from.splice(storageIdx, 1);
+    return true;
+  });
+}
+
+function buildDisplaySongRows(songs, sortMode) {
+  const indexed = (songs || []).map((s, storageIndex) => ({ s, storageIndex }));
+  if (sortMode === 'titleAsc') {
+    indexed.sort((a, b) => String(a.s.title || '').localeCompare(String(b.s.title || ''), 'ko', { sensitivity: 'base' }));
+  } else if (sortMode === 'titleDesc') {
+    indexed.sort((a, b) => String(b.s.title || '').localeCompare(String(a.s.title || ''), 'ko', { sensitivity: 'base' }));
+  }
+  return indexed;
 }
 
 function songToPlayShape(s) {
@@ -3427,8 +3592,12 @@ async function shuffleRoomQueue() {
 
 let _pendingSaveSong = null;
 let _folderPickFromNowPlaying = false;
+let _folderPickerMode = 'save';
+let _pendingMove = null;
 
 function openFolderPicker(song, titleText, opts) {
+  _folderPickerMode = 'save';
+  _pendingMove = null;
   _pendingSaveSong = song;
   _folderPickFromNowPlaying = !!(opts && opts.fromNowPlaying);
   const t = document.getElementById('folder-picker-title');
@@ -3438,9 +3607,23 @@ function openFolderPicker(song, titleText, opts) {
   document.getElementById('folder-picker').setAttribute('aria-hidden', 'false');
 }
 
+function openMoveCopyPicker(fromFolder, storageIndex, asCopy) {
+  _folderPickerMode = asCopy ? 'copy' : 'move';
+  _pendingSaveSong = null;
+  _folderPickFromNowPlaying = false;
+  _pendingMove = { fromFolder, storageIndex };
+  const t = document.getElementById('folder-picker-title');
+  if (t) t.textContent = asCopy ? '다른 폴더에 복사' : '다른 폴더로 이동';
+  renderFolderPickerList();
+  document.getElementById('folder-picker').classList.add('open');
+  document.getElementById('folder-picker').setAttribute('aria-hidden', 'false');
+}
+
 function closeFolderPicker() {
   _pendingSaveSong = null;
   _folderPickFromNowPlaying = false;
+  _folderPickerMode = 'save';
+  _pendingMove = null;
   document.getElementById('folder-picker').classList.remove('open');
   document.getElementById('folder-picker').setAttribute('aria-hidden', 'true');
 }
@@ -3449,9 +3632,17 @@ function renderFolderPickerList() {
   const list = document.getElementById('folder-picker-list');
   if (!list) return;
   const data = loadPlaylists(myName);
-  const keys = Object.keys(data).sort();
+  let keys = Object.keys(data).sort();
+  if (_folderPickerMode === 'move' || _folderPickerMode === 'copy') {
+    const pf = _pendingMove && _pendingMove.fromFolder;
+    keys = keys.filter(k => k !== pf);
+  }
   if (!keys.length) {
-    list.innerHTML = '<div class="pl-empty" style="padding:12px;">폴더가 없어요. 아래에서 새로 만들 수 있어요.</div>';
+    list.innerHTML = '<div class="pl-empty" style="padding:12px;">' +
+      (_folderPickerMode === 'save'
+        ? '폴더가 없어요. 아래에서 새로 만들 수 있어요.'
+        : '이동·복사할 다른 폴더가 없어요. 먼저 폴더를 만드세요.') +
+      '</div>';
     return;
   }
   list.innerHTML = '';
@@ -3460,18 +3651,33 @@ function renderFolderPickerList() {
     row.type = 'button';
     row.className = 'folder-picker-item';
     row.innerHTML = `<span class="folder-picker-item-name">${escHtml(name)}</span><span class="folder-picker-item-count">${(data[name] || []).length}곡</span>`;
-    row.addEventListener('click', () => {
-      if (!_pendingSaveSong) return;
-      if (addSong(myName, name, _pendingSaveSong)) {
-        toast(`"${name}"에 저장됨 ✅`);
-        if (_folderPickFromNowPlaying) {
-          const b = document.getElementById('save-current-btn');
-          if (b) {
-            const prev = b.textContent;
-            b.textContent = '✅';
-            setTimeout(() => { b.textContent = prev; }, 900);
+    row.addEventListener('click', async () => {
+      if (_folderPickerMode === 'save') {
+        if (!_pendingSaveSong) return;
+        if (await addSong(myName, name, _pendingSaveSong)) {
+          toast(`"${name}"에 저장됨 ✅`);
+          if (_folderPickFromNowPlaying) {
+            const b = document.getElementById('save-current-btn');
+            if (b) {
+              const prev = b.textContent;
+              b.textContent = '✅';
+              setTimeout(() => { b.textContent = prev; }, 900);
+            }
           }
+          closeFolderPicker();
+          renderPlaylistPanel();
         }
+        return;
+      }
+      if (!_pendingMove) return;
+      const ok = await transferSongBetweenFolders(
+        _pendingMove.fromFolder,
+        _pendingMove.storageIndex,
+        name,
+        _folderPickerMode === 'copy'
+      );
+      if (ok) {
+        toast(_folderPickerMode === 'copy' ? `"${name}"에 복사했어요` : `"${name}"(으)로 옮겼어요`);
         closeFolderPicker();
         renderPlaylistPanel();
       }
@@ -3485,14 +3691,19 @@ function renderPlaylistPanel() {
   if (!root) return;
   const data = loadPlaylists(myName);
   const names = Object.keys(data).sort();
+  const sortMode = state.playlistSortMode || 'titleAsc';
+  document.querySelectorAll('.pl-sort-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-sort') === sortMode);
+  });
   if (!names.length) {
-    root.innerHTML = '<div class="pl-empty">＋ 폴더 버튼으로 폴더를 만들고<br>검색 결과나 재생 중인 곡을 저장할 수 있어요.</div>';
+    root.innerHTML = '<div class="pl-empty">＋ 폴더로 만들기 · 모두 같은 방 플레이리스트를 봅니다.<br>검색·재생 중 곡을 폴더에 넣을 수 있어요.</div>';
     return;
   }
   root.innerHTML = '';
   const canDJ = isMeDJ();
   names.forEach(folderName => {
     const songs = data[folderName] || [];
+    const rows = buildDisplaySongRows(songs, sortMode);
     const fold = document.createElement('div');
     fold.className = 'pl-folder';
     const header = document.createElement('div');
@@ -3517,20 +3728,20 @@ function renderPlaylistPanel() {
     renameB.className = 'pl-btn';
     renameB.textContent = '✎';
     renameB.title = '이름 변경';
-    renameB.addEventListener('click', e => {
+    renameB.addEventListener('click', async e => {
       e.stopPropagation();
       const nn = prompt('새 폴더 이름', folderName);
-      if (nn && renameFolder(myName, folderName, nn)) renderPlaylistPanel();
+      if (nn && await renameFolder(myName, folderName, nn)) renderPlaylistPanel();
     });
     const delB = document.createElement('button');
     delB.type = 'button';
     delB.className = 'pl-btn remove';
     delB.textContent = '🗑';
     delB.title = '폴더 삭제';
-    delB.addEventListener('click', e => {
+    delB.addEventListener('click', async e => {
       e.stopPropagation();
       if (confirm(`"${folderName}" 폴더를 삭제할까요?`)) {
-        deleteFolder(myName, folderName);
+        await deleteFolder(myName, folderName);
         renderPlaylistPanel();
       }
     });
@@ -3545,17 +3756,10 @@ function renderPlaylistPanel() {
 
     const body = document.createElement('div');
     body.className = 'pl-folder-songs';
-    songs.forEach((s, idx) => {
+    rows.forEach(({ s, storageIndex }) => {
       const row = document.createElement('div');
       row.className = 'pl-item';
-      const th = escHtml(s.thumbnail || s.thumb || '');
-      row.innerHTML = `
-        <img class="pl-thumb" src="${th}" alt="">
-        <div class="pl-info">
-          <div class="pl-title">${escHtml(s.title || '')}</div>
-          <div class="pl-channel">${escHtml(s.channel || '')}</div>
-        </div>
-        <div class="pl-actions"></div>`;
+      row.innerHTML = `<div class="pl-title-line" title="${escHtml(s.title || '')}">${escHtml(s.title || '(제목 없음)')}</div><div class="pl-actions"></div>`;
       const moveDiv = row.querySelector('.pl-actions');
       if (canDJ) {
         const addQ = document.createElement('button');
@@ -3569,25 +3773,51 @@ function renderPlaylistPanel() {
         });
         moveDiv.appendChild(addQ);
       }
-      const up = document.createElement('button');
-      up.type = 'button';
-      up.className = 'pl-btn';
-      up.textContent = '↑';
-      up.disabled = idx === 0;
-      up.addEventListener('click', () => { moveSong(myName, folderName, idx, idx - 1); renderPlaylistPanel(); });
-      const down = document.createElement('button');
-      down.type = 'button';
-      down.className = 'pl-btn';
-      down.textContent = '↓';
-      down.disabled = idx === songs.length - 1;
-      down.addEventListener('click', () => { moveSong(myName, folderName, idx, idx + 1); renderPlaylistPanel(); });
+      const mv = document.createElement('button');
+      mv.type = 'button';
+      mv.className = 'pl-btn';
+      mv.textContent = '↪';
+      mv.title = '다른 폴더로 이동';
+      mv.addEventListener('click', () => openMoveCopyPicker(folderName, storageIndex, false));
+      const cp = document.createElement('button');
+      cp.type = 'button';
+      cp.className = 'pl-btn';
+      cp.textContent = '⧉';
+      cp.title = '다른 폴더에 복사';
+      cp.addEventListener('click', () => openMoveCopyPicker(folderName, storageIndex, true));
+      moveDiv.appendChild(mv);
+      moveDiv.appendChild(cp);
+      if (sortMode === 'manual') {
+        const arrLen = songs.length;
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.className = 'pl-btn';
+        up.textContent = '↑';
+        up.disabled = storageIndex === 0;
+        up.addEventListener('click', async () => {
+          await moveSong(myName, folderName, storageIndex, storageIndex - 1);
+          renderPlaylistPanel();
+        });
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.className = 'pl-btn';
+        down.textContent = '↓';
+        down.disabled = storageIndex === arrLen - 1;
+        down.addEventListener('click', async () => {
+          await moveSong(myName, folderName, storageIndex, storageIndex + 1);
+          renderPlaylistPanel();
+        });
+        moveDiv.appendChild(up);
+        moveDiv.appendChild(down);
+      }
       const rm = document.createElement('button');
       rm.type = 'button';
       rm.className = 'pl-btn remove';
       rm.textContent = '✕';
-      rm.addEventListener('click', () => { removeSong(myName, folderName, s.id); renderPlaylistPanel(); });
-      moveDiv.appendChild(up);
-      moveDiv.appendChild(down);
+      rm.addEventListener('click', async () => {
+        await removeSong(myName, folderName, s.id);
+        renderPlaylistPanel();
+      });
       moveDiv.appendChild(rm);
       body.appendChild(row);
     });
@@ -4065,9 +4295,9 @@ document.getElementById('tab-chat').addEventListener('click', () => switchTab('c
 document.getElementById('tab-playlist').addEventListener('click', () => switchTab('playlist'));
 document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
 
-document.getElementById('pl-new-folder-btn')?.addEventListener('click', () => {
-  const name = prompt('새 폴더 이름');
-  if (name && createFolder(myName, name)) {
+document.getElementById('pl-new-folder-btn')?.addEventListener('click', async () => {
+  const name = (prompt('새 폴더 이름') || '').trim();
+  if (name && await createFolder(myName, name)) {
     renderPlaylistPanel();
     toast('폴더가 만들어졌어요 📂');
   }
@@ -4078,15 +4308,25 @@ document.getElementById('folder-picker')?.addEventListener('click', e => {
   if (e.target.id === 'folder-picker') closeFolderPicker();
 });
 document.querySelector('.folder-picker-box')?.addEventListener('click', e => e.stopPropagation());
-document.getElementById('folder-picker-new-btn')?.addEventListener('click', () => {
+document.getElementById('folder-picker-new-btn')?.addEventListener('click', async () => {
   const inp = document.getElementById('folder-picker-new-input');
   const name = (inp && inp.value || '').trim();
   if (!name) return;
-  if (createFolder(myName, name)) {
+  if (await createFolder(myName, name)) {
     inp.value = '';
     renderFolderPickerList();
     toast('폴더가 만들어졌어요 📂');
   }
+});
+
+document.querySelectorAll('.pl-sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const m = btn.getAttribute('data-sort');
+    if (!m) return;
+    state.playlistSortMode = m;
+    document.querySelectorAll('.pl-sort-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderPlaylistPanel();
+  });
 });
 
 document.getElementById('queue-toggle-btn')?.addEventListener('click', () => {
@@ -4151,7 +4391,7 @@ document.addEventListener('visibilitychange',()=>{
 
 // ── SERVICE WORKER 등록
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js', { scope: '/music-room/' })
+  navigator.serviceWorker.register('service-worker.js', { scope: './' })
     .then(reg => console.log('SW registered:', reg.scope))
     .catch(err => console.warn('SW failed:', err));
 }
