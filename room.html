@@ -2799,7 +2799,7 @@ async function enterRoom() {
     }
   });
 
-  onValue(ref(db, `rooms/${myRoomId}/sharedPlaylist`), snap => {
+  onValue(ref(db, userPlaylistDbPath(myName)), snap => {
     state.sharedPlaylist = normalizePlaylistMap(snap.exists() ? snap.val() : null);
     const fp = document.getElementById('folder-picker');
     if (fp && fp.classList.contains('open')) renderFolderPickerList();
@@ -3264,7 +3264,19 @@ function launchEmoji(emoji) {
   }
 }
 
-// ── PLAYLIST (Firebase rooms/*/sharedPlaylist — 방마다 전원 공유)
+// ── PLAYLIST (Firebase userPlaylists/<닉> — 방과 무관하게 동일 닉네임이면 동일 목록)
+function firebaseKeyFromNick(nick) {
+  return String(nick || '').replace(/[.#$[\]]/g, '_');
+}
+
+function userPlaylistDbPath(nick) {
+  return `userPlaylists/${firebaseKeyFromNick(nick)}`;
+}
+
+function playlistOwnerNick() {
+  return String((state.me && state.me.name) || myName || '').trim();
+}
+
 function normalizeQueueSong(s) {
   if (!s || !s.id) return null;
   const thumbnail = s.thumbnail || s.thumb || '';
@@ -3320,7 +3332,7 @@ function playlistMapDenormalizeForFirebase(data) {
 
 function loadLegacyLocalPlaylists(nick) {
   try {
-    const key = 'musicroom_playlists_' + String(nick || '').replace(/[.#$\[\]]/g, '_');
+    const key = 'musicroom_playlists_' + firebaseKeyFromNick(nick);
     const raw = localStorage.getItem(key);
     if (!raw) return {};
     const o = JSON.parse(raw);
@@ -3338,12 +3350,13 @@ function playlistTxCurrentAsObject(current) {
 }
 
 async function sharedPlaylistTransaction(mutateFn) {
-  if (!state.roomId || !window._fbReady || !window._fb.runTransaction) {
+  const nick = playlistOwnerNick();
+  if (!nick || !window._fbReady || !window._fb.runTransaction) {
     toast('연결 준비 중이에요');
     return false;
   }
   const { db, ref, runTransaction } = window._fb;
-  const pathRef = ref(db, `rooms/${state.roomId}/sharedPlaylist`);
+  const pathRef = ref(db, userPlaylistDbPath(nick));
   try {
     const result = await runTransaction(pathRef, (current) => {
       const raw = playlistTxCurrentAsObject(current);
@@ -3365,11 +3378,11 @@ async function sharedPlaylistTransaction(mutateFn) {
 }
 
 async function maybeMigrateLocalPlaylistToShared() {
-  if (!state.roomId || !window._fbReady || !window._fb.runTransaction) return;
-  const key = 'mr_sharedpl_migrated_' + state.roomId;
+  if (!myName || !window._fbReady || !window._fb.runTransaction) return;
+  const key = 'mr_userpl_migrated_' + firebaseKeyFromNick(myName);
   if (sessionStorage.getItem(key)) return;
   const { db, ref, get, runTransaction } = window._fb;
-  const pathRef = ref(db, `rooms/${state.roomId}/sharedPlaylist`);
+  const pathRef = ref(db, userPlaylistDbPath(myName));
   try {
     const snap = await get(pathRef);
     const existing = normalizePlaylistMap(snap.exists() ? snap.val() : null);
@@ -3378,7 +3391,30 @@ async function maybeMigrateLocalPlaylistToShared() {
       return;
     }
     const legacy = loadLegacyLocalPlaylists(myName);
-    if (isPlaylistMapEmpty(legacy)) {
+    if (!isPlaylistMapEmpty(legacy)) {
+      const txResult = await runTransaction(pathRef, (current) => {
+        const ex = normalizePlaylistMap(playlistTxCurrentAsObject(current));
+        if (!isPlaylistMapEmpty(ex)) {
+          return current !== null && current !== undefined && typeof current === 'object' && !Array.isArray(current)
+            ? current
+            : {};
+        }
+        return playlistMapDenormalizeForFirebase(clonePlaylistMap(legacy));
+      });
+      if (txResult.committed) {
+        const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
+        state.sharedPlaylist = normalizePlaylistMap(v);
+      }
+      sessionStorage.setItem(key, '1');
+      return;
+    }
+    if (!state.roomId) {
+      sessionStorage.setItem(key, '1');
+      return;
+    }
+    const roomPlSnap = await get(ref(db, `rooms/${state.roomId}/sharedPlaylist`));
+    const fromRoom = normalizePlaylistMap(roomPlSnap.exists() ? roomPlSnap.val() : null);
+    if (isPlaylistMapEmpty(fromRoom)) {
       sessionStorage.setItem(key, '1');
       return;
     }
@@ -3389,7 +3425,7 @@ async function maybeMigrateLocalPlaylistToShared() {
           ? current
           : {};
       }
-      return playlistMapDenormalizeForFirebase(clonePlaylistMap(legacy));
+      return playlistMapDenormalizeForFirebase(clonePlaylistMap(fromRoom));
     });
     if (txResult.committed) {
       const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
