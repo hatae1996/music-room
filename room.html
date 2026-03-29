@@ -1731,13 +1731,18 @@ const urlP = new URLSearchParams(location.search);
 const myName = urlP.get('name') || '';
 const myCharId = urlP.get('charId') || CHARS[0].id;
 const myColorId = urlP.get('colorId') || COLORS[0].id;
-const myRoomId = urlP.get('roomId') || '';
+const myRoomId = (urlP.get('roomId') || urlP.get('room') || '').trim().toUpperCase();
 const mySeatIndex = urlP.get('seatIndex') !== null ? parseInt(urlP.get('seatIndex')) : undefined;
 const isRejoin = urlP.get('rejoin') === '1';
 
 if (!myName || !myRoomId) {
   location.href = 'index.html';
 }
+
+(function syncRoomChromeFromUrl() {
+  const el = document.getElementById('room-id-display');
+  if (el) el.textContent = `📋 ROOM: ${myRoomId}`;
+})();
 
 // ── STATE
 const state = {
@@ -2549,6 +2554,9 @@ function fbAddHistory(entry) {
 }
 // ── ENTER ROOM
 async function enterRoom() {
+  if (!window._fb || !window._fb.db) {
+    throw new Error('Firebase가 아직 준비되지 않았습니다');
+  }
   let migratePrevRoomId = null;
   try {
     const rawSess = localStorage.getItem('musicroom_session');
@@ -2633,12 +2641,19 @@ async function enterRoom() {
     roomId:myRoomId, name:myName, charId:myCharId, colorId:myColorId, seatIndex, savedAt:Date.now()
   }));
 
-  // 링크 복사
-  document.getElementById('room-id-display').textContent = `📋 ROOM: ${myRoomId}`;
-  document.getElementById('room-id-display').addEventListener('click',()=>{
-    navigator.clipboard.writeText(`${location.origin}${location.pathname.replace('room.html','index.html')}?room=${myRoomId}`)
-      .then(()=>toast('링크 복사됨! 🔗'));
-  });
+  // 링크 복사 (중복 입장 시 리스너 중복 방지)
+  const roomIdEl = document.getElementById('room-id-display');
+  if (roomIdEl) {
+    roomIdEl.textContent = `📋 ROOM: ${myRoomId}`;
+    if (!roomIdEl.dataset.mrCopyBound) {
+      roomIdEl.dataset.mrCopyBound = '1';
+      roomIdEl.addEventListener('click', () => {
+        const path = location.pathname.replace(/room\.html$/i, 'index.html');
+        navigator.clipboard.writeText(`${location.origin}${path}?room=${encodeURIComponent(myRoomId)}`)
+          .then(() => toast('링크 복사됨! 🔗'));
+      });
+    }
+  }
 
   let chatPersistWatermark = getChatLogMaxTs(myRoomId);
   let chatNotifyInitialized = false;
@@ -4567,9 +4582,25 @@ setInterval(() => {
 }, 15000);
 
 // ── START
-// Firebase 준비되면 입장
-window.addEventListener('firebase-ready', ()=>{enterRoom();});
-if (window._fbReady) enterRoom();
+// Firebase 준비되면 입장 (모듈 로드 실패·DB 오류 시 안내)
+function startMusicRoomWhenFirebaseReady() {
+  if (!window._fbReady || !window._fb) return;
+  enterRoom().catch((e) => {
+    console.error(e);
+    const msg = (e && e.message) ? e.message : String(e);
+    toast('방 입장 실패: ' + msg);
+    if (e && typeof e.code === 'string' && e.code.includes('PERMISSION')) {
+      toast('Realtime Database 규칙에서 rooms 접근을 허용했는지 확인해 주세요');
+    }
+  });
+}
+window.addEventListener('firebase-ready', () => { startMusicRoomWhenFirebaseReady(); });
+if (window._fbReady) startMusicRoomWhenFirebaseReady();
+setTimeout(() => {
+  if (!window._fbReady) {
+    toast('Firebase 스크립트를 불러오지 못했습니다. 광고·추적 차단을 끄거나 네트워크를 확인해 주세요');
+  }
+}, 12000);
 </script>
 </body>
 </html>
