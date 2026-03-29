@@ -3327,6 +3327,10 @@ async function sharedPlaylistTransaction(mutateFn) {
       if (ok === false) return undefined;
       return data;
     });
+    if (result.committed) {
+      const v = result.snapshot.exists() ? result.snapshot.val() : null;
+      state.sharedPlaylist = normalizePlaylistMap(v);
+    }
     return result.committed;
   } catch (e) {
     console.error(e);
@@ -3353,11 +3357,15 @@ async function maybeMigrateLocalPlaylistToShared() {
       sessionStorage.setItem(key, '1');
       return;
     }
-    await runTransaction(pathRef, (current) => {
+    const txResult = await runTransaction(pathRef, (current) => {
       const ex = normalizePlaylistMap(playlistTxCurrentAsObject(current));
       if (!isPlaylistMapEmpty(ex)) return ex;
       return legacy;
     });
+    if (txResult.committed) {
+      const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
+      state.sharedPlaylist = normalizePlaylistMap(v);
+    }
     sessionStorage.setItem(key, '1');
   } catch (e) {
     console.error(e);
