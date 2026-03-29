@@ -2553,6 +2553,7 @@ async function enterRoom() {
   const snap = await get(roomRef);
 
   let seatIndex = mySeatIndex;
+  let shouldAnnounceJoin = false;
 
   if (!snap.exists()) {
     await set(roomRef,{
@@ -2564,6 +2565,7 @@ async function enterRoom() {
       queueIndex: 0,
     });
     seatIndex = 0;
+    shouldAnnounceJoin = true;
   } else {
     const data = snap.val();
     if (!data.dj || data.dj.currentDJ === undefined) {
@@ -2595,13 +2597,14 @@ async function enterRoom() {
       });
       state.me = {name:myName, charId:myCharId, colorId:myColorId, seatIndex};
     } else {
-      // 새 자리 배정
+      // 새 자리 배정 (처음 들어온 참가자)
       seatIndex = [0,1,2,3].find(i=>!taken.includes(i));
       if (seatIndex === undefined) { alert('방이 꽉 찼어요!'); location.href='index.html'; return; }
       state.me = {name:myName, charId:myCharId, colorId:myColorId, seatIndex};
       await set(ref(db,`rooms/${myRoomId}/seats/seat_${seatIndex}`),{
         name:myName,charId:myCharId,colorId:myColorId,seatIndex,song:null,joinedAt:Date.now()
       });
+      shouldAnnounceJoin = true;
     }
   }
 
@@ -2610,6 +2613,7 @@ async function enterRoom() {
     await set(ref(db,`rooms/${myRoomId}/seats/seat_${seatIndex}`),{
       name:myName,charId:myCharId,colorId:myColorId,seatIndex,song:null,joinedAt:Date.now()
     });
+    shouldAnnounceJoin = true;
   }
 
   // DJ는 DJ 신청(또는 대기열 승격)으로만 부스에 입장 (첫 입장 자동 DJ 제거)
@@ -2827,7 +2831,9 @@ async function enterRoom() {
     });
   });
 
-  fbSendSystemChat(myRoomId,`${myName}님이 입장했습니다 🎉`);
+  if (shouldAnnounceJoin) {
+    fbSendSystemChat(myRoomId, `${myName}님이 입장했습니다 🎉`);
+  }
 
   maybeMigrateLocalPlaylistToShared().catch(() => {});
 }
