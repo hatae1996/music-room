@@ -3293,6 +3293,25 @@ function clonePlaylistMap(raw) {
   return o;
 }
 
+/** RTDB는 빈 배열 [] 를 쓰면 자식이 없다고 보고 키가 사라지는 경우가 많아, 빈 폴더는 '' 로 저장 */
+function playlistMapDenormalizeForFirebase(data) {
+  const out = {};
+  for (const k of Object.keys(data)) {
+    const v = data[k];
+    if (!Array.isArray(v)) {
+      out[k] = v;
+      continue;
+    }
+    out[k] = v.length === 0 ? '' : v.map(s => ({
+      id: s.id,
+      title: s.title || '',
+      channel: s.channel || '',
+      thumbnail: s.thumbnail || ''
+    }));
+  }
+  return out;
+}
+
 function loadLegacyLocalPlaylists(nick) {
   try {
     const key = 'musicroom_playlists_' + String(nick || '').replace(/[.#$\[\]]/g, '_');
@@ -3325,7 +3344,7 @@ async function sharedPlaylistTransaction(mutateFn) {
       const data = clonePlaylistMap(raw);
       const ok = mutateFn(data);
       if (ok === false) return undefined;
-      return data;
+      return playlistMapDenormalizeForFirebase(data);
     });
     if (result.committed) {
       const v = result.snapshot.exists() ? result.snapshot.val() : null;
@@ -3359,8 +3378,12 @@ async function maybeMigrateLocalPlaylistToShared() {
     }
     const txResult = await runTransaction(pathRef, (current) => {
       const ex = normalizePlaylistMap(playlistTxCurrentAsObject(current));
-      if (!isPlaylistMapEmpty(ex)) return ex;
-      return legacy;
+      if (!isPlaylistMapEmpty(ex)) {
+        return current !== null && current !== undefined && typeof current === 'object' && !Array.isArray(current)
+          ? current
+          : {};
+      }
+      return playlistMapDenormalizeForFirebase(clonePlaylistMap(legacy));
     });
     if (txResult.committed) {
       const v = txResult.snapshot.exists() ? txResult.snapshot.val() : null;
@@ -3381,7 +3404,7 @@ async function createFolder(_nick, folderName) {
   const name = (folderName || '').trim();
   if (!name) return false;
   return sharedPlaylistTransaction((data) => {
-    if (data[name]) {
+    if (Object.prototype.hasOwnProperty.call(data, name)) {
       toast('같은 이름의 폴더가 있어요');
       return false;
     }
@@ -3401,8 +3424,8 @@ async function renameFolder(_nick, oldName, newName) {
   const nn = (newName || '').trim();
   if (!nn || nn === oldName) return false;
   return sharedPlaylistTransaction((data) => {
-    if (!data[oldName]) return false;
-    if (data[nn]) {
+    if (!Object.prototype.hasOwnProperty.call(data, oldName)) return false;
+    if (Object.prototype.hasOwnProperty.call(data, nn)) {
       toast('이미 있는 폴더 이름이에요');
       return false;
     }
